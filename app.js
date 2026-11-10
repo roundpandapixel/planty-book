@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 
 const TOPICS = {
-  notes: { title: "Notes",    empty: "Nothing yet. Tap the pencil to add notes." },
+  info:  { title: "Info",     empty: "No notes yet. Tap the pencil to add some." },
   water: { title: "Watering", empty: "How does it like to be watered? Tap the pencil." },
   sun:   { title: "Sunlight", empty: "How much sun does it like? Tap the pencil." },
   pest:  { title: "Pests",    empty: "No pest notes yet." },
@@ -10,7 +10,8 @@ const TOPICS = {
 };
 
 let plant = null;          // the plant whose page is open
-let topic = "notes";
+let topic = "info";          // which tab of the plant's page is showing
+const NOTE_KEY = t => (t === "info" ? "notes" : t);        // the Info tab holds the plant's general notes
 let photoIndex = 0;
 let plantRoom = null;      // the open plant's room
 let photoURLs = [];        // object URLs for the open page's photos
@@ -484,7 +485,7 @@ async function openPlant(id, push = true) {
   if (!p) { showBook(); return; }
   if (push) history.pushState({ plant: id }, "", "#" + id);
   plant = p;
-  topic = "notes";
+  topic = "info";
   photoIndex = Math.max(0, p.photos.indexOf(p.cover));
   $("book").hidden = true;
   $("page").hidden = false;
@@ -508,7 +509,7 @@ function renderNotes() {
   $("edit-btn").hidden = false;
   const list = $("notes-list");
   list.innerHTML = "";
-  const items = plant[topic] || [];
+  const items = plant[NOTE_KEY(topic)] || [];
   for (const line of items) {
     const li = document.createElement("li");
     li.textContent = line;
@@ -520,6 +521,8 @@ function renderNotes() {
     li.textContent = TOPICS[topic].empty;
     list.append(li);
   }
+  $("info-box").hidden = topic !== "info";
+  if (topic === "info") renderInfo();
   $("pest-box").hidden = topic !== "pest";
   $("sun-box").hidden = topic !== "sun";
   $("water-box").hidden = topic !== "water";
@@ -544,8 +547,61 @@ function renderNotes() {
       : "Last treated: never";
 }
 
+// ---------- the Info tab ----------
+// Is the plant's repot flagged ("needs"), possibly due by its species' usual interval ("maybe"), or nothing to say ("ok")?
+function repotStatus(p) {
+  if (p.needsRepot) return "needs";
+  const sp = speciesById(p.species), g = sp ? suggestedRepotYears(sp) : null;
+  return g && p.lastRepot && monthsSince(p.lastRepot) >= g[0] * 12 ? "maybe" : "ok";
+}
+
+function renderInfo() {
+  const sp = speciesById(plant.species);
+  const goTo = t => { topic = t; renderNotes(); };
+
+  // status chips: what needs doing
+  const chips = $("info-chips");
+  chips.innerHTML = "";
+  const chip = (icon, text, cls, target) => {
+    const b = document.createElement("button");
+    b.className = "chip " + cls;
+    b.innerHTML = iconSVG(icon) + "<span></span>";
+    b.querySelector("span").textContent = text;
+    b.onclick = () => goTo(target);
+    chips.append(b);
+  };
+  const open = dueIn(plant), w = whenText(plant);
+  if (open === null) chip("drop", "Water: no schedule yet", "", "water");
+  else if (open <= 0) chip("drop", `Needs water · ${w}`, "alert", "water");
+  else chip("drop", `Water ${w}`, "", "water");
+  const rs = repotStatus(plant);
+  chip("shovel", rs === "needs" ? "Needs repot" : rs === "maybe" ? "Repot may be due" : "No repot flagged", rs === "needs" ? "alert" : rs === "maybe" ? "soft" : "", "dirt");
+
+  // at a glance
+  const facts = $("info-facts");
+  facts.innerHTML = "";
+  const st = soilType(plant.soilType);
+  const rows = [];
+  const aka = sp ? sp.aka.filter(x => !sp.name.toLowerCase().includes(x) && x !== sp.sci.toLowerCase()).slice(0, 4) : [];   // not just its own name again
+  if (aka.length) rows.push(["Also called", aka.join(", "), null]);
+  rows.push(["Added", niceDate(new Date(plant.created || Date.now()).toLocaleDateString("en-CA")), null]);
+  rows.push(["Water", plant.every ? `${everyWords(plant.every, plant.everyMax)}` + (plant.lastWatered ? `, last ${daysAgo(plant.lastWatered)}` : ", not watered yet") : "no schedule yet", "water"]);
+  rows.push(["Soil", st ? st.name : "not chosen", "dirt"]);
+  rows.push(["Repot", plant.lastRepot ? `last ${sinceText(plant.lastRepot)}` : "no date recorded", "dirt"]);
+  rows.push(["Light", plant.sun[0] || (sp && sp.sun[0]) || "not set", "sun"]);
+  for (const [k, v, target] of rows) {
+    const a = document.createElement("span"), b = document.createElement("span");
+    a.className = "k"; a.textContent = k;
+    b.className = "v" + (target ? " go" : ""); b.textContent = v;
+    if (target) b.onclick = () => goTo(target);
+    facts.append(a, b);
+  }
+  $("info-notes-label").textContent = (plant.notes || []).length ? "Notes" : "";
+  $("info-notes-label").hidden = !(plant.notes || []).length;
+}
+
 function editNotes() {
-  $("notes-text").value = (plant[topic] || []).join("\n");
+  $("notes-text").value = (plant[NOTE_KEY(topic)] || []).join("\n");
   $("notes-list").hidden = true;
   $("edit-btn").hidden = true;
   $("notes-edit").hidden = false;
@@ -553,7 +609,7 @@ function editNotes() {
 }
 
 async function saveNotes() {
-  plant[topic] = $("notes-text").value.split("\n")
+  plant[NOTE_KEY(topic)] = $("notes-text").value.split("\n")
     .map(s => s.replace(/^\s*[•\-*]\s*/, "").trim()).filter(Boolean);
   if (topic === "water" || topic === "dirt") delete plant.careBefore;
   await save();
@@ -645,24 +701,14 @@ function renderSoilType() {
   $("soil-type").textContent = t ? `Soil type: ${t.name}`
     : g ? `Soil type: not chosen. Suggested for ${sp.name}: ${g.name} (tap to choose)`
     : "Soil type: not chosen (tap to choose)";
-  $("soil-type-desc").textContent = t ? `${t.recipe}. ${t.about}` : "";
-  $("soil-type-desc").hidden = !t;
   $("soil-type-btn").textContent = t ? "Change soil type" : "Choose soil type";
 }
 async function pickSoilType() {
   const sp = speciesById(plant.species), guess = sp ? soilDefault(sp) : null;
-  const body = document.createElement("div");
-  for (const t of SOIL_TYPES) {
-    const p = document.createElement("p");
-    p.className = "soil-opt";
-    p.innerHTML = "<b></b><span></span>";
-    p.querySelector("b").textContent = t.name + (t.id === guess ? "  (suggested)" : "");
-    p.querySelector("span").textContent = `${t.recipe}. ${t.about}`;
-    body.append(p);
-  }
-  const actions = SOIL_TYPES.map(t => ({ label: t.name, cls: t.id === plant.soilType ? "strong" : "", value: t.id }));
+  const actions = SOIL_TYPES.map(t => ({
+    label: t.name + (t.id === guess ? " (suggested)" : ""), cls: t.id === plant.soilType ? "strong" : "", value: t.id }));
   actions.push({ label: "Not chosen", value: "" }, { label: "Cancel", value: null });
-  const v = await modal({ title: "What soil does it like?", body, actions });
+  const v = await modal({ title: "What soil does it like?", actions });
   if (v === null) return;
   plant.soilType = v || null;
   await save(); renderSoilType();
@@ -1274,7 +1320,7 @@ $("treated-btn").onclick = treatedToday;
 $("pest-last").onclick = changePestDate;
 $("gallery-btn").onclick = galleryOptions;
 document.querySelectorAll("[data-topic]").forEach(b => {
-  b.onclick = () => { topic = topic === b.dataset.topic ? "notes" : b.dataset.topic; renderNotes(); };
+  b.onclick = () => { topic = topic === b.dataset.topic && topic !== "info" ? "info" : b.dataset.topic; renderNotes(); };
 });
 
 // A new day may have started while the app sat open: bring the "Water today" list up to date.

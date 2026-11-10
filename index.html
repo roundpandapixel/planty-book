@@ -35,6 +35,7 @@
       <button class="icon-btn small" id="lookup-btn" aria-label="Look it up online" data-icon="search"></button>
     </header>
     <nav class="topics" aria-label="Care topics">
+      <button class="icon-btn" data-topic="info" data-icon="leaf" aria-label="General info"></button>
       <button class="icon-btn" data-topic="water" data-icon="drop" aria-label="Preferred watering"></button>
       <button class="icon-btn" data-topic="sun" data-icon="sun" aria-label="Preferred sun"></button>
       <button class="icon-btn" data-topic="pest" data-icon="bug" aria-label="Pest treatment"></button>
@@ -45,6 +46,11 @@
       <div class="notes-head">
         <h2 id="notes-title">Notes</h2>
         <button class="icon-btn small ghost" id="edit-btn" aria-label="Edit notes" data-icon="pencil"></button>
+      </div>
+      <div id="info-box" hidden>
+        <div class="chips" id="info-chips"></div>
+        <div class="facts" id="info-facts"></div>
+        <p class="sub-label" id="info-notes-label">Notes</p>
       </div>
       <div id="pest-box" hidden>
         <p id="pest-last"></p>
@@ -59,7 +65,7 @@
         </div>
       </div>
       <div id="soil-type-box" class="info-box" hidden>
-        <div class="grow"><p id="soil-type"></p><p id="soil-type-desc"></p></div>
+        <div class="grow"><p id="soil-type"></p></div>
         <div class="btns"><button class="pill" id="soil-type-btn">Choose soil type</button></div>
       </div>
       <div id="soil-box" class="info-box" hidden>

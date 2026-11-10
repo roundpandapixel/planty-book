@@ -185,12 +185,26 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
   background: var(--ink); color: var(--accent); border-radius: 8px;
 }
 
+/* Info tab: status chips and the at-a-glance list */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: pointer;
+  border: 2px solid var(--ink-soft); border-radius: 10px; background: transparent; color: var(--ink);
+  font: inherit; font-size: 21px; text-align: left;
+}
+.chip svg { width: 16px; height: 16px; flex: none; }
+.chip.alert { background: var(--ink); color: var(--accent); border-color: var(--ink); }
+.chip.alert svg { fill: var(--accent); }
+.chip.soft { border-color: var(--ink); }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin-bottom: 4px; }
+.facts .k { color: var(--ink-soft); }
+.facts .v { overflow-wrap: anywhere; }
+.facts .go { cursor: pointer; }
+.sub-label { margin: 10px 0 0; color: var(--ink-soft); }
+
 /* Soil tab: soil type */
 #soil-type { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; }
-#soil-type-desc { color: var(--ink-soft); font-size: 21px; }
 #soil-type-box { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
-.soil-opt { margin: 8px 0; font-size: 20px; color: var(--ink-soft); text-align: left; }
-.soil-opt b { display: block; font-weight: normal; font-size: 22px; color: var(--ink); }
 
 /* Soil tab: repotting */
 #repot-last { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; }

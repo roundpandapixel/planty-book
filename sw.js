@@ -3,7 +3,7 @@
 //  - Install: every file is fetched straight from the server (cache: "reload"), never from the browser's own short-lived
 //    HTTP cache. (Without that, an update right after another one could save the OLD files under the NEW version.)
 //  - Use: online, ask the server first (a cheap "has it changed?" check) and keep the answer; offline, use the saved copy.
-const VERSION = "planty-18";
+const VERSION = "planty-19";
 const FILES = [
   "./", "index.html", "style.css", "icons.js", "species.js", "legacy.js", "config.js", "lib/qrcode.js", "store.js", "sync.js",
   "sky.js", "meter.js", "app.js", "manifest.webmanifest", "fonts/VT323-Regular.ttf",

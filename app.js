@@ -1106,7 +1106,7 @@ function qrCanvas(text) {
 }
 
 async function showPairing(first) {
-  const link = Sync.pairLink();
+  const link = Sync.pairLink(), tag = await Sync.bookTag();
   const body = document.createElement("div");
   body.innerHTML = `<p>${first ? "Syncing is on. " : ""}To add another device, open this link there, or scan the code with its camera.</p>`;
   body.append(qrCanvas(link));
@@ -1114,6 +1114,7 @@ async function showPairing(first) {
   box.readOnly = true; box.rows = 3; box.value = link;
   box.onfocus = () => box.select();
   body.append(box);
+  body.insertAdjacentHTML("beforeend", `<p class="meter-help" style="text-align:left">Book code: ${tag}. The other device should show the same code once it has joined.</p>`);
   body.insertAdjacentHTML("beforeend",
     `<p class="meter-help" style="text-align:left">Keep this private: anyone with the link can read your book. Photos and notes are encrypted before they leave your devices.</p>`);
   const v = await modal({ title: "Add a device", body, actions: [{ label: "Copy link", cls: "strong", value: "copy" }, { label: "Done", value: null }] });
@@ -1142,8 +1143,9 @@ async function syncMenu() {
     return;
   }
   const body = document.createElement("div");
-  body.innerHTML = `<p></p><p class="meter-help" style="text-align:left"></p>`;
+  body.innerHTML = `<p></p><p class="meter-help" style="text-align:left"></p><p class="meter-help" style="text-align:left"></p>`;
   body.children[0].textContent = syncLine();
+  Sync.bookTag().then(t => { body.children[2].textContent = `Book code: ${t} (devices that share plants show the same code)`; });
   Sync.usage().then(u => {
     if (u) body.children[1].textContent = `Cloud storage: ${gb(u.bytes)} of ${gb(u.max)} used`;
   });
@@ -1152,21 +1154,32 @@ async function syncMenu() {
     actions: [
       { label: "Sync now", cls: "strong", value: "now" },
       { label: "Add another device", value: "pair" },
+      { label: "Switch to another book (pairing link)", value: "switch" },
       { label: "Stop syncing on this device", value: "stop" },
       { label: "Close", value: null },
     ],
   });
   if (v === "now") Sync.run();
   else if (v === "pair") await showPairing(false);
+  else if (v === "switch") { const text = await askText("Pairing link", "", "Paste it here"); if (text) await connectFromLink(text); }
   else if (v === "stop" && await confirmBox("Stop syncing?",
     "This device keeps its plants and photos, but stops sharing changes. The cloud copy stays as it is.", "Stop"))
     Sync.stop();
 }
 
-// Opened from a pairing link: join the book.
+// Opened from a pairing link: join that book. A device already syncing with a different book is offered a switch
+// (its plants are added to the new book; nothing here is deleted).
 async function connectFromLink(text) {
-  if (!Sync.ready || Sync.configured) return;
-  if (!await confirmBox("Connect to sync?",
+  if (!Sync.ready) return;
+  const info = Sync.checkLink(text);
+  if (!info) { await notice("Sync", "That doesn't look like a pairing link."); return; }
+  if (Sync.configured) {
+    if (info.same) { await notice("Already connected", "This device is already syncing with that book."); return; }
+    if (!await confirmBox("Switch books?",
+      "This device is syncing with a different book than the one in this link. Switch to the link's book? The plants here are added to it, and nothing on this device is deleted.",
+      "Switch", "strong")) return;
+    Sync.stop();
+  } else if (!await confirmBox("Connect to sync?",
     "This joins this device to your Planty Book cloud. What's here will be merged with what's there.", "Connect", "strong")) return;
   try { await Sync.joinFromLink(text); await notice("Connected", "Your plants and photos will appear in a moment."); }
   catch (e) { await notice("Sync", e.message); }

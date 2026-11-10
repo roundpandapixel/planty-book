@@ -190,6 +190,15 @@ const Sync = (() => {
     kickTimer = setTimeout(run, delay);
   }
 
+  // { u: the cloud's address, k: the book's key } from a pairing link, or null
+  function parseLink(text) {
+    const m = /(?:#|^)pair=([A-Za-z0-9_-]+)/.exec((text || "").trim());
+    let o = null;
+    try { o = JSON.parse(dec.decode(unb64u(m[1]))); } catch (e) {}      // no match or bad text: o stays null
+    const okUrl = o && (/^https:\/\//.test(o.u || "") || /^http:\/\/(127\.0\.0\.1|localhost)/.test(o.u || ""));
+    return okUrl && /^[A-Za-z0-9_-]{43}$/.test(o.k || "") ? o : null;
+  }
+
   // ---------- setting up, pairing ----------
   const appUrl = () => (typeof APP_URL !== "undefined" && APP_URL) || location.origin + location.pathname;
 
@@ -215,13 +224,21 @@ const Sync = (() => {
     subscribe(f) { listeners.add(f); return () => listeners.delete(f); },
     kick, run,
     async startHere() { await join(SYNC_URL, b64u(crypto.getRandomValues(new Uint8Array(32)))); },
+    // null if the text isn't a pairing link; otherwise { same: it is the book this device already uses }
+    checkLink(text) {
+      const o = parseLink(text);
+      return o ? { same: !!cfg && cfg.key === o.k } : null;
+    },
     async joinFromLink(text) {
-      const m = /(?:#|^)pair=([A-Za-z0-9_-]+)/.exec(text.trim());
-      let o = null;
-      try { o = JSON.parse(dec.decode(unb64u(m[1]))); } catch (e) {}   // no match or bad text: o stays null
-      if (!o || !/^https:\/\//.test(o.u || "") && !/^http:\/\/(127\.0\.0\.1|localhost)/.test(o.u || "") || !/^[A-Za-z0-9_-]{43}$/.test(o.k || ""))
-        throw new SyncError("That doesn't look like a pairing link.");
+      const o = parseLink(text);
+      if (!o) throw new SyncError("That doesn't look like a pairing link.");
       await join(o.u, o.k);
+    },
+    // A short code for this device's book: devices that share plants show the same code.
+    async bookTag() {
+      if (!cfg) return null;
+      const d = await crypto.subtle.digest("SHA-256", enc.encode((await derive()).token));
+      return [...new Uint8Array(d).slice(0, 3)].map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
     },
     pairLink() { return `${appUrl()}#pair=${b64u(enc.encode(JSON.stringify({ u: cfg.url, k: cfg.key })))}`; },
     stop() { writeCfg(null); clearTimeout(kickTimer); try { localStorage.removeItem("pb.lastSync"); } catch (e) {} st.last = null; emit(); },

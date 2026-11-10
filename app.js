@@ -699,18 +699,18 @@ const soilType = id => SOIL_TYPES.find(t => t.id === id) || null;
 function renderSoilType() {
   const t = soilType(plant.soilType), sp = speciesById(plant.species), g = sp ? soilType(soilDefault(sp)) : null;
   $("soil-type").textContent = t ? `Soil type: ${t.name}`
-    : g ? `Soil type: not chosen. Suggested for ${sp.name}: ${g.name} (tap to choose)`
-    : "Soil type: not chosen (tap to choose)";
+    : g ? `Soil type: not chosen · suggested: ${g.name}`
+    : "Soil type: not chosen";
   $("soil-type-btn").textContent = t ? "Change soil type" : "Choose soil type";
 }
+// Only the four options. Tap outside the box to close it; tap the chosen one again to clear it.
 async function pickSoilType() {
-  const sp = speciesById(plant.species), guess = sp ? soilDefault(sp) : null;
-  const actions = SOIL_TYPES.map(t => ({
-    label: t.name + (t.id === guess ? " (suggested)" : ""), cls: t.id === plant.soilType ? "strong" : "", value: t.id }));
-  actions.push({ label: "Not chosen", value: "" }, { label: "Cancel", value: null });
-  const v = await modal({ title: "What soil does it like?", actions });
+  const v = await modal({
+    title: "Soil type",
+    actions: SOIL_TYPES.map(t => ({ label: t.name, cls: t.id === plant.soilType ? "strong" : "", value: t.id })),
+  });
   if (v === null) return;
-  plant.soilType = v || null;
+  plant.soilType = v === plant.soilType ? null : v;
   await save(); renderSoilType();
 }
 

@@ -200,6 +200,8 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
 .book-actions .pill { flex: 1; min-height: 48px; background: var(--panel); border-color: transparent; }
 .info-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
 .info-box p { margin: 0; }
+.info-box .grow { flex: 1 1 100%; }
+#water-every { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; }
 #water-next { color: var(--ink-soft); }
 .field { display: block; margin-top: 10px; }
 .field input { margin-top: 4px; }
@@ -211,6 +213,24 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
 /* QR code in the pairing dialog */
 .qr { display: block; width: 100%; max-width: 260px; margin: 10px auto; image-rendering: pixelated; border-radius: 10px; }
 .modal-box textarea { font-size: 18px; }
+
+/* Homepage: plants due today and the groups */
+.due-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.due-head h2 { margin: 0 0 4px; }
+.due-head .pill { min-height: 36px; padding: 2px 12px; font-size: 21px; }
+.due-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }
+.due-row .who { flex: 1; min-width: 0; text-align: left; background: none; border: 0; color: inherit; font: inherit; padding: 0; cursor: pointer; }
+.due-row .who .nm { display: block; overflow-wrap: anywhere; }
+.due-row small { display: block; font-size: 19px; color: var(--ink-soft); }
+.due-row .pill { min-height: 36px; padding: 2px 12px; font-size: 21px; flex: none; }
+.book-actions .pill.strong { background: var(--ink); color: var(--accent); border-color: var(--ink); }
+.card .sub { font-size: 19px; color: var(--ink-soft); margin-top: -4px; min-height: 1em; }
+.card.due-card .thumb { border-color: #ffe0ef; border-width: 3px; }
+.num-in {
+  width: 3.6em; padding: 8px 8px; margin: 0 4px; font: inherit; font-size: 22px;
+  background: rgba(255, 255, 255, 0.92); color: #2b3a2e; border: 2px solid var(--ink); border-radius: 10px; outline: none;
+}
+.quick { flex-wrap: wrap; }
 
 /* Date picking */
 .date-in {

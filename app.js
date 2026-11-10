@@ -72,24 +72,36 @@ function daysAgo(iso) {
   return n === 0 ? "today" : n === 1 ? "yesterday" : n > 0 ? `${n} days ago` : `in ${-n} days`;
 }
 
-// ---------- watering schedule (by room) ----------
+// ---------- watering schedule (each plant's own) ----------
 function addDays(iso, n) {
   const d = new Date(iso + "T12:00:00");
   d.setDate(d.getDate() + n);
   return d.toLocaleDateString("en-CA");
 }
-// Days until the room's next watering: 0 = today, negative = late, null = no schedule.
-function dueIn(room) {
-  if (!room || !room.every) return null;
-  if (!room.last) return 0;
-  return Math.round((new Date(addDays(room.last, room.every) + "T12:00:00") - new Date(today() + "T12:00:00")) / 86400000);
+// Days until the plant's next watering: 0 = today, negative = late, null = no schedule.
+// A plant with a schedule that has never been watered is due now.
+function dueIn(p) {
+  if (!p || !p.every) return null;
+  if (!p.lastWatered) return 0;
+  return Math.round((new Date(addDays(p.lastWatered, p.every) + "T12:00:00") - new Date(today() + "T12:00:00")) / 86400000);
 }
-function dueText(room) {
-  const n = dueIn(room);
-  if (n === null) return "No watering schedule";
-  const every = room.every === 1 ? "every day" : `every ${room.every} days`;
-  const when = n === 0 ? "due today" : n < 0 ? `${-n} day${n === -1 ? "" : "s"} late` : n === 1 ? "due tomorrow" : `due in ${n} days`;
-  return `Water ${every} · ${when}`;
+const dueWords = n => n === 0 ? "due today" : n < 0 ? `${-n} day${n === -1 ? "" : "s"} late` : n === 1 ? "due tomorrow" : `due in ${n} days`;
+const everyWords = n => n === 1 ? "every day" : n === 7 ? "every week" : `every ${n} days`;
+
+// A starting guess for how often a species wants water, read from its care notes (null if they don't say).
+function suggestedEvery(s) {
+  const t = s.water.join(" ").toLowerCase();
+  let m;
+  if ((m = /every (\d+)\s*[-–]\s*(\d+) weeks/.exec(t))) return Math.round((+m[1] + +m[2]) / 2 * 7);
+  if ((m = /every (\d+)\s*[-–]\s*(\d+) days/.exec(t))) return Math.round((+m[1] + +m[2]) / 2);
+  if ((m = /every (\d+) weeks/.exec(t))) return +m[1] * 7;
+  if (/once a week|weekly/.test(t)) return 7;
+  if (/dry out (completely|almost completely)/.test(t)) return 14;
+  if (/top (2|3)[-–]?\d? ?in|half of the soil/.test(t)) return 10;
+  if (/top 1[-–]2 in/.test(t)) return 7;
+  if (/top 1 in/.test(t)) return 5;
+  if (/moist|never let it dry/.test(t)) return 3;
+  return null;
 }
 
 // Choose a date on the phone's calendar (never later than today). Returns "YYYY-MM-DD", "" (cleared) or null (cancelled).
@@ -116,31 +128,50 @@ async function askDate(title, value, shortcuts = true) {
   });
 }
 
-// A room was watered on this date: its plants were too.
-async function setRoomWatered(room, date) {
-  room.last = date;
-  await Store.putRoom(room);
-  for (const p of await Store.allPlants())
-    if (p.room === room.id) { p.lastWatered = date; await Store.putPlant(p); }
+// How often does this plant need water? Returns a number of days, "" (no schedule) or null (cancelled).
+async function askEvery(p) {
+  const s = speciesById(p.species), guess = s ? suggestedEvery(s) : null;
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `<label class="field">Water every <input type="number" class="num-in" min="1" max="365" inputmode="numeric" placeholder="-"> days</label>
+    <div class="quick"></div>`;
+  const input = wrap.querySelector("input"), row = wrap.querySelector(".quick");
+  input.value = p.every || "";
+  for (const n of [2, 3, 5, 7, 10, 14, 21, 30]) {
+    const b = document.createElement("button");
+    b.className = "pill"; b.textContent = n;
+    b.onclick = () => { input.value = n; };
+    row.append(b);
+  }
+  if (guess) {
+    const note = document.createElement("p");
+    note.className = "meter-help"; note.style.textAlign = "left";
+    note.textContent = `A starting guess for ${s.name}: about every ${guess} days, from its care notes. Check the soil, since every home is different.`;
+    wrap.append(note);
+    const use = document.createElement("button");
+    use.className = "pill"; use.textContent = `Use ${guess} days`; use.style.marginTop = "8px";
+    use.onclick = () => { input.value = guess; };
+    wrap.append(use);
+  }
+  return modal({
+    title: `${p.name}: how often?`, body: wrap, inline: true,
+    actions: [{ label: "No schedule", value: "" }, { label: "Cancel", value: null },
+              { label: "OK", cls: "strong", value: () => { const n = parseInt(input.value, 10); return n > 0 ? Math.min(n, 365) : null; } }],
+  });
 }
 
-async function waterRoom(room) {
-  await setRoomWatered(room, today());
-  showBook();
+async function waterNow(p) {
+  p.lastWatered = today();
+  await Store.putPlant(p);
 }
 
+// Rooms are only labels: a name to group plants by.
 async function editRoom(room) {
   const isNew = !room;
-  room = room || { id: Store.newId(), name: "", every: null, last: null };
+  room = room || { id: Store.newId(), name: "" };
   const body = document.createElement("div");
-  body.innerHTML = `<label class="field">Name<input type="text" maxlength="40" placeholder="Living room, kitchen..."></label>
-    <label class="field">Water every <input type="number" min="1" max="60" inputmode="numeric" placeholder="-"> days</label>
-    <label class="field">Last watered <input type="date" class="date-in"></label>
-    <p class="meter-help" style="text-align:left">Leave the days empty for no schedule.</p>`;
-  const [nameIn, everyIn, dateIn] = body.querySelectorAll("input");
+  body.innerHTML = `<label class="field">Name<input type="text" maxlength="40" placeholder="Living room, kitchen..."></label>`;
+  const nameIn = body.querySelector("input");
   nameIn.value = room.name;
-  everyIn.value = room.every || "";
-  dateIn.value = room.last || ""; dateIn.max = today();
   const actions = [{ label: "Save", cls: "strong", value: "save" }];
   if (!isNew) actions.push({ label: "Delete room", cls: "danger", value: "delete" });
   actions.push({ label: "Cancel", value: null });
@@ -153,15 +184,29 @@ async function editRoom(room) {
   }
   if (v !== "save" || !nameIn.value.trim()) return null;
   room.name = nameIn.value.trim();
-  const every = parseInt(everyIn.value, 10);
-  room.every = every > 0 ? Math.min(every, 365) : null;
-  const last = dateIn.value || null;
-  if (last !== room.last) await setRoomWatered(room, last);       // also marks its plants
-  else await Store.putRoom(room);
+  await Store.putRoom(room);
   return room;
 }
 
+// Rooms used to carry the watering schedule. Move it onto their plants, once.
+async function migrateWatering() {
+  if (await Store.getMeta("waterMigrated")) return;
+  const rooms = await Store.allRooms(), byId = new Map(rooms.map(r => [r.id, r]));
+  for (const p of await Store.allPlants()) {
+    const r = byId.get(p.room);
+    if (r && r.every && !p.every) {
+      p.every = r.every;
+      if (!p.lastWatered && r.last) p.lastWatered = r.last;
+      await Store.putPlant(p);
+    }
+  }
+  for (const r of rooms) if (r.every || r.last) { r.every = null; r.last = null; await Store.putRoom(r); }
+  await Store.setMeta("waterMigrated", 1);
+}
+
 // ---------- the book ----------
+let groupMode = (() => { try { return localStorage.getItem("pb.group") === "room" ? "room" : "water"; } catch (e) { return "water"; } })();
+
 async function showBook() {
   plant = null;
   $("page").hidden = true;
@@ -171,83 +216,117 @@ async function showBook() {
   const [plants, rooms] = await Promise.all([Store.allPlants(), Store.allRooms()]);
   plants.sort((a, b) => a.name.localeCompare(b.name));
   rooms.sort((a, b) => a.name.localeCompare(b.name));
+  const roomName = new Map(rooms.map(r => [r.id, r.name]));
   const body = $("book-body");
   body.innerHTML = "";
 
-  const due = rooms.filter(r => dueIn(r) !== null && dueIn(r) <= 0);
+  // Today: the plants that need water now
+  const due = plants.filter(p => dueIn(p) !== null && dueIn(p) <= 0)
+    .sort((a, b) => dueIn(a) - dueIn(b) || a.name.localeCompare(b.name));
+  const box = document.createElement("section");
+  box.className = "panel due-panel";
   if (due.length) {
-    const box = document.createElement("section");
-    box.className = "panel due-panel";
-    box.innerHTML = `<h2>Water today</h2>`;
-    for (const r of due) {
-      const p = document.createElement("p");
-      const n = dueIn(r);
-      p.textContent = `• ${r.name}` + (n < 0 ? ` (${-n} day${n === -1 ? "" : "s"} late)` : "");
-      box.append(p);
+    const head = document.createElement("div");
+    head.className = "due-head";
+    head.innerHTML = `<h2>Water today</h2>`;
+    if (due.length > 1) {
+      const all = document.createElement("button");
+      all.className = "pill"; all.textContent = "All watered";
+      all.onclick = async () => { for (const p of due) await waterNow(p); showBook(); };
+      head.append(all);
+    }
+    box.append(head);
+    for (const p of due) {
+      const row = document.createElement("div");
+      row.className = "due-row";
+      row.innerHTML = `<button class="who"><span class="nm"></span><small></small></button><button class="pill">Watered</button>`;
+      row.querySelector(".nm").textContent = p.name;
+      const n = dueIn(p), bits = [roomName.get(p.room), n < 0 ? dueWords(n) : ""].filter(Boolean);
+      row.querySelector("small").textContent = bits.join(" · ");
+      row.querySelector(".who").onclick = () => openPlant(p.id);
+      row.querySelector(".pill").onclick = async () => { await waterNow(p); showBook(); };
+      box.append(row);
     }
     body.append(box);
+  } else {
+    const next = plants.filter(p => dueIn(p) !== null).sort((a, b) => dueIn(a) - dueIn(b))[0];
+    if (next) {
+      box.innerHTML = `<h2>Nothing to water today</h2><p></p>`;
+      box.querySelector("p").textContent = `Next: ${next.name}, ${dueWords(dueIn(next))}`;
+      body.append(box);
+    }
   }
 
-  const known = new Set(rooms.map(r => r.id));
-  for (const r of rooms) body.append(roomSection(r, plants.filter(p => p.room === r.id)));
-  const loose = plants.filter(p => !known.has(p.room));
-  if (loose.length || !rooms.length) body.append(roomSection(null, loose, rooms.length > 0));
+  // How to group the plants
+  const seg = document.createElement("div");
+  seg.className = "book-actions";
+  for (const [mode, label] of [["water", "By watering"], ["room", "By room"]]) {
+    const b = document.createElement("button");
+    b.className = "pill" + (groupMode === mode ? " strong" : "");
+    b.textContent = label;
+    b.onclick = () => { groupMode = mode; try { localStorage.setItem("pb.group", mode); } catch (e) {} showBook(); };
+    seg.append(b);
+  }
+  body.append(seg);
+
+  if (!plants.length) body.insertAdjacentHTML("beforeend", `<section class="panel due-panel"><p>No plants yet. Tap "+ New plant" to start your book.</p></section>`);
+
+  if (groupMode === "water") {
+    const groups = new Map();
+    for (const p of plants) {
+      const k = p.every || 0;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(p);
+    }
+    for (const k of [...groups.keys()].sort((a, b) => (a || 1e9) - (b || 1e9)))
+      body.append(plantGroup(k ? `Every ${k === 1 ? "day" : k + " days"}` : "No schedule yet", groups.get(k), roomName, "room"));
+  } else {
+    const known = new Set(rooms.map(r => r.id));
+    for (const r of rooms) body.append(plantGroup(r.name, plants.filter(p => p.room === r.id), roomName, "every", r));
+    const loose = plants.filter(p => !known.has(p.room));
+    if (loose.length) body.append(plantGroup(rooms.length ? "Not in a room" : "Plants", loose, roomName, "every"));
+  }
 
   const acts = document.createElement("div");
   acts.className = "book-actions";
-  acts.innerHTML = `<button class="pill">+ New room</button>`;
-  acts.firstChild.onclick = async () => { if (await editRoom(null)) showBook(); };
+  acts.innerHTML = `<button class="pill">+ New plant</button><button class="pill">+ New room</button>`;
+  acts.children[0].onclick = () => addPlant();
+  acts.children[1].onclick = async () => { if (await editRoom(null)) showBook(); };
   body.append(acts);
 }
 
-function roomSection(room, plants, titled = true) {
+// One titled group of plant cards. `sub` says what to print under each name: its room, or how often it's watered.
+function plantGroup(title, plants, roomName, sub, room = null) {
   const sec = document.createElement("section");
   sec.className = "room";
-  if (room || titled) {
-    const head = document.createElement("div");
-    head.className = "panel room-head";
-    head.innerHTML = `<div class="room-info"><h2></h2><p></p></div>`;
-    head.querySelector("h2").textContent = room ? room.name : "Not in a room";
-    const line = head.querySelector("p");
-    if (room) {
-      line.textContent = dueText(room);
-      if (dueIn(room) !== null && dueIn(room) <= 0) line.className = "due";
-      if (room.every) {
-        const w = document.createElement("button");
-        w.className = "pill";
-        w.textContent = "Watered";
-        w.onclick = () => waterRoom(room);
-        head.append(w);
-      }
-      if (room.every) {
-        const c = document.createElement("button");
-        c.className = "icon-btn small ghost";
-        c.setAttribute("aria-label", "Pick the date it was last watered");
-        c.innerHTML = iconSVG("calendar");
-        c.onclick = async () => {
-          const v = await askDate(`${room.name}: last watered`, room.last);
-          if (v === null) return;
-          await setRoomWatered(room, v || null);
-          showBook();
-        };
-        head.append(c);
-      }
-      const e = document.createElement("button");
-      e.className = "icon-btn small ghost";
-      e.setAttribute("aria-label", "Edit room");
-      e.innerHTML = iconSVG("pencil");
-      e.onclick = async () => { await editRoom(room); showBook(); };
-      head.append(e);
-    } else line.remove();
-    sec.append(head);
+  const head = document.createElement("div");
+  head.className = "panel room-head";
+  head.innerHTML = `<div class="room-info"><h2></h2><p></p></div>`;
+  head.querySelector("h2").textContent = title;
+  const dueN = plants.filter(p => dueIn(p) !== null && dueIn(p) <= 0).length;
+  const line = head.querySelector("p");
+  line.textContent = `${plants.length} plant${plants.length === 1 ? "" : "s"}` + (dueN ? ` · ${dueN} due today` : "");
+  if (dueN) line.className = "due";
+  if (room) {
+    const e = document.createElement("button");
+    e.className = "icon-btn small ghost";
+    e.setAttribute("aria-label", "Edit room");
+    e.innerHTML = iconSVG("pencil");
+    e.onclick = async () => { await editRoom(room); showBook(); };
+    head.append(e);
   }
+  sec.append(head);
+
   const grid = document.createElement("div");
   grid.className = "grid";
   for (const p of plants) {
     const card = document.createElement("button");
     card.className = "panel card";
-    card.innerHTML = `<div class="thumb">${iconSVG("sprout")}</div><div class="label"></div>`;
+    card.innerHTML = `<div class="thumb">${iconSVG("sprout")}</div><div class="label"></div><div class="sub"></div>`;
     card.querySelector(".label").textContent = p.name;
+    const n = dueIn(p);
+    card.querySelector(".sub").textContent = sub === "room" ? (roomName.get(p.room) || "") : p.every ? everyWords(p.every) : "";
+    if (n !== null && n <= 0) card.classList.add("due-card");
     card.onclick = () => openPlant(p.id);
     grid.append(card);
     const coverId = p.cover || p.photos[0];
@@ -259,11 +338,13 @@ function roomSection(room, plants, titled = true) {
       card.querySelector(".thumb").innerHTML = `<img alt="" src="${url}">`;
     });
   }
-  const add = document.createElement("button");
-  add.className = "panel card add";
-  add.innerHTML = `<div class="thumb">${iconSVG("plus")}</div><div class="label">New plant</div>`;
-  add.onclick = () => addPlant(room ? room.id : null);
-  grid.append(add);
+  if (room) {
+    const add = document.createElement("button");
+    add.className = "panel card add";
+    add.innerHTML = `<div class="thumb">${iconSVG("plus")}</div><div class="label">New plant</div>`;
+    add.onclick = () => addPlant(room.id);
+    grid.append(add);
+  }
   sec.append(grid);
   return sec;
 }
@@ -326,13 +407,16 @@ function renderNotes() {
   $("sun-box").hidden = topic !== "sun";
   $("water-box").hidden = topic !== "water";
   if (topic === "water") {
+    const sp = speciesById(plant.species), guess = sp ? suggestedEvery(sp) : null;
+    $("water-every").textContent = plant.every ? `Water ${everyWords(plant.every)}`
+      : guess ? `How often? A guess for this species: about every ${guess} days (tap to set)`
+      : "How often does it need water? Tap to set";
     $("water-last").textContent = plant.lastWatered
       ? `Last watered: ${niceDate(plant.lastWatered)} (${daysAgo(plant.lastWatered)})`
       : "Last watered: not yet";
-    const n = dueIn(plantRoom);
-    $("water-next").textContent = !plantRoom ? "Put it in a room to give it a schedule"
-      : n === null ? `${plantRoom.name} has no schedule yet`
-      : `${plantRoom.name}: ${dueText(plantRoom).replace(/^Water /, "")}`;
+    const n = dueIn(plant);
+    $("water-next").textContent = n === null ? "" : `Next: ${dueWords(n)}`;
+    $("water-next").hidden = n === null;
   }
   if (topic === "pest")
     $("pest-last").textContent = plant.lastPest
@@ -429,6 +513,14 @@ async function chooseRoom() {
 
 async function wateredToday() {
   plant.lastWatered = today();
+  await save();
+  renderNotes();
+}
+
+async function pickEvery() {
+  const v = await askEvery(plant);
+  if (v === null) return;
+  plant.every = v || null;
   await save();
   renderNotes();
 }
@@ -955,6 +1047,8 @@ $("room-btn").onclick = chooseRoom;
 $("watered-btn").onclick = wateredToday;
 $("water-date-btn").onclick = pickWaterDate;
 $("water-last").onclick = pickWaterDate;
+$("every-btn").onclick = pickEvery;
+$("water-every").onclick = pickEvery;
 $("edit-btn").onclick = editNotes;
 $("notes-cancel").onclick = renderNotes;
 $("notes-save").onclick = saveNotes;
@@ -963,6 +1057,11 @@ $("pest-last").onclick = changePestDate;
 $("gallery-btn").onclick = galleryOptions;
 document.querySelectorAll("[data-topic]").forEach(b => {
   b.onclick = () => { topic = topic === b.dataset.topic ? "notes" : b.dataset.topic; renderNotes(); };
+});
+
+// A new day may have started while the app sat open: bring the "Water today" list up to date.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && !$("book").hidden && $("modal").hidden) showBook();
 });
 
 // The phone's back button: page -> book.
@@ -984,7 +1083,7 @@ const startHash = location.hash.slice(1);
 const pairing = startHash.startsWith("pair=") ? startHash : null;     // a pairing link, not a plant
 const startId = pairing ? "" : startHash;
 history.replaceState({}, "", location.pathname + location.search);
-showBook().then(() => {
+migrateWatering().then(showBook).then(() => {
   if (startId) openPlant(startId);
   if (pairing) connectFromLink(pairing);
   Sync.kick(500);

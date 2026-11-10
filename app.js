@@ -443,6 +443,7 @@ function plantGroup(title, plants, roomName, sub, room = null) {
     const n = dueIn(p);
     card.querySelector(".sub").textContent = sub === "room" ? (roomName.get(p.room) || "") : p.every ? everyWords(p.every, p.everyMax) : "";
     if (n !== null && n <= 0) card.classList.add("due-card");
+    if (p.needsRepot) { const b = document.createElement("span"); b.className = "badge"; b.textContent = "repot?"; card.append(b); }
     card.onclick = () => openPlant(p.id);
     grid.append(card);
     const coverId = p.cover || p.photos[0];
@@ -522,6 +523,8 @@ function renderNotes() {
   $("pest-box").hidden = topic !== "pest";
   $("sun-box").hidden = topic !== "sun";
   $("water-box").hidden = topic !== "water";
+  $("soil-box").hidden = topic !== "dirt";
+  if (topic === "dirt") renderRepot();
   if (topic === "water") {
     const sp = speciesById(plant.species), guess = sp ? suggestedEvery(sp) : null;
     $("water-every").textContent = plant.every ? `Water ${everyWords(plant.every, plant.everyMax)}`
@@ -632,6 +635,61 @@ async function wateredToday() {
   plant.lastWatered = today();
   await save();
   renderNotes();
+}
+
+// ---------- repotting ----------
+function monthsSince(iso) {
+  const d = new Date(iso + "T12:00:00"), n = new Date();
+  return (n.getFullYear() - d.getFullYear()) * 12 + n.getMonth() - d.getMonth() - (n.getDate() < d.getDate() ? 1 : 0);
+}
+// "7 days ago", "5 months ago", "about 2 years ago"
+function sinceText(iso) {
+  const days = Math.round((new Date(today() + "T12:00:00") - new Date(iso + "T12:00:00")) / 86400000);
+  if (days <= 45) return daysAgo(iso);
+  const m = monthsSince(iso);
+  return m < 24 ? `${m} months ago` : `about ${Math.round(m / 12)} years ago`;
+}
+// How often a species is usually repotted, [fewest, most] years, if its soil notes say so.
+function suggestedRepotYears(sp) {
+  const t = sp.dirt.join(" ").toLowerCase();
+  let m;
+  if ((m = /repot every (\d+)(?:\s*-\s*(\d+))? years?/.exec(t))) return [+m[1], +(m[2] || m[1])];
+  if (/repot (?:it )?yearly|repot (?:it )?every year/.test(t)) return [1, 1];
+  return null;
+}
+function renderRepot() {
+  $("repot-last").textContent = plant.lastRepot
+    ? `Last known repot: ${niceDate(plant.lastRepot)} (${sinceText(plant.lastRepot)})`
+    : "Last known repot: not recorded (tap to set)";
+  const sp = speciesById(plant.species), g = sp ? suggestedRepotYears(sp) : null;
+  let hint = "";
+  if (g && !plant.needsRepot) {
+    const every = g[0] === g[1] ? `every ${g[0] === 1 ? "year" : g[0] + " years"}` : `every ${g[0]}-${g[1]} years`;
+    if (!plant.lastRepot) hint = `${sp.name} is usually repotted ${every}.`;
+    else if (monthsSince(plant.lastRepot) >= g[0] * 12) hint = `It's usually repotted ${every}, so it may be time.`;
+    else {
+      const next = new Date(plant.lastRepot + "T12:00:00"); next.setFullYear(next.getFullYear() + g[0]);
+      hint = `Usually repotted ${every}: next around ${next.toLocaleDateString("en-US", { month: "short", year: "numeric" })}.`;
+    }
+  }
+  $("repot-hint").textContent = hint; $("repot-hint").hidden = !hint;
+  $("repot-status").textContent = plant.needsRepot ? "Marked as needing a repot" : "";
+  $("repot-status").hidden = !plant.needsRepot;
+  $("repot-need-btn").textContent = plant.needsRepot ? "Repot not needed" : "Needs repot?";
+}
+async function repottedToday() {
+  plant.lastRepot = today(); plant.needsRepot = false;
+  await save(); renderRepot();
+}
+async function pickRepotDate() {
+  const v = await askDate(`${plant.name}: last known repot`, plant.lastRepot);
+  if (v === null) return;
+  plant.lastRepot = v || null;
+  await save(); renderRepot();
+}
+async function toggleNeedsRepot() {
+  plant.needsRepot = !plant.needsRepot;
+  await save(); renderRepot();
 }
 
 async function pickEvery() {
@@ -1171,6 +1229,10 @@ $("watered-btn").onclick = wateredToday;
 $("water-date-btn").onclick = pickWaterDate;
 $("water-last").onclick = pickWaterDate;
 $("every-btn").onclick = pickEvery;
+$("repot-today-btn").onclick = repottedToday;
+$("repot-date-btn").onclick = pickRepotDate;
+$("repot-last").onclick = pickRepotDate;
+$("repot-need-btn").onclick = toggleNeedsRepot;
 $("water-every").onclick = pickEvery;
 $("edit-btn").onclick = editNotes;
 $("notes-cancel").onclick = renderNotes;

@@ -55,19 +55,19 @@ const SPECIES = (() => {
      DRAIN,
      "Forgiving: better to water a little late than too often"],
     ["Low to bright indirect light", "Grows fastest in bright, indirect light", "Avoid harsh direct sun"],
-    ["Standard potting mix with about 1/3 perlite (2 parts mix, 1 part perlite)", "Very forgiving: no bark needed, though a handful helps drainage", "Pot with drainage holes; repot only when the roots fill the pot", "Let it trail, or train it up a pole"]);
+    ["Chunky aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Forgiving, but it grows best and rots least in a chunky, fast-draining mix", "Pot with drainage holes; repot only when the roots fill the pot", "Let it trail, or train it up a pole"]);
   const POTHOS_VAR = care(
     ["Water when the top 2 in. of soil is dry: about every 7-10 days, every 10-14 days in winter",
      "Drooping leaves mean it's thirsty and it perks up within hours; yellow leaves mean too much water",
      DRAIN,
      "Variegated types use a little less water than green ones"],
     ["Bright, indirect light keeps the variegation", "In low light it slows down and turns greener", "Avoid harsh direct sun"],
-    ["Standard potting mix with about 1/3 perlite (2 parts mix, 1 part perlite)", "Variegated pothos grow more slowly than green ones: don't oversize the pot", "Pot with drainage holes; repot only when the roots fill the pot", "Let it trail, or train it up a pole"]);
-  // Epipremnum pinnatum types (Cebu Blue, Baltic Blue...) like it chunkier than golden pothos
+    ["Chunky aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Variegated pothos grow more slowly than green ones: don't oversize the pot", "Pot with drainage holes; repot only when the roots fill the pot", "Let it trail, or train it up a pole"]);
+  // Epipremnum pinnatum types (Cebu Blue, Baltic Blue...): the same chunky mix, and they split their leaves on a pole
   const POTHOS_PIN = care(POTHOS.water, POTHOS.sun,
-    ["Chunkier than golden pothos: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Pot with drainage holes"]);
+    ["Chunky aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Pot with drainage holes"]);
   const POTHOS_PIN_VAR = care(POTHOS_VAR.water, POTHOS_VAR.sun,
-    ["Chunkier than golden pothos: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Variegated types grow slowly: don't oversize the pot", "Pot with drainage holes"]);
+    ["Chunky aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Variegated types grow slowly: don't oversize the pot", "Pot with drainage holes"]);
   const SCIND = care(
     ["Let the top 2 in. of soil dry out: about every 10-14 days, every 14-21 days in winter",
      "Curling leaves mean it's thirsty; yellowing means too wet",
@@ -599,7 +599,7 @@ const SPECIES = (() => {
 })();
 
 // Goes up whenever the care text changes; the app offers to refresh saved plants' notes.
-const CARE_VERSION = 4;
+const CARE_VERSION = 5;
 
 // The soil types a plant can be given (plant.soilType holds the id).
 const SOIL_TYPES = [

@@ -1354,5 +1354,14 @@ migrateWatering().then(migrateSoil).then(showBook).then(() => {
   offerCareUpdate();
 });
 
-if ("serviceWorker" in navigator && location.protocol.startsWith("http"))
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register("sw.js").catch(() => {});
+  // A new version took over: reload to show it, as soon as nothing is being edited. (Not on the very first install.)
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController) return;
+    const idle = () => $("modal").hidden && $("notes-edit").hidden && $("meter").hidden && $("viewer").hidden;
+    if (idle()) { location.reload(); return; }
+    const t = setInterval(() => { if (idle()) { clearInterval(t); location.reload(); } }, 3000);
+  });
+}

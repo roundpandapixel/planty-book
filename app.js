@@ -524,7 +524,8 @@ function renderNotes() {
   $("sun-box").hidden = topic !== "sun";
   $("water-box").hidden = topic !== "water";
   $("soil-box").hidden = topic !== "dirt";
-  if (topic === "dirt") renderRepot();
+  $("soil-type-box").hidden = topic !== "dirt";
+  if (topic === "dirt") { renderSoilType(); renderRepot(); }
   if (topic === "water") {
     const sp = speciesById(plant.species), guess = sp ? suggestedEvery(sp) : null;
     $("water-every").textContent = plant.every ? `Water ${everyWords(plant.every, plant.everyMax)}`
@@ -635,6 +636,36 @@ async function wateredToday() {
   plant.lastWatered = today();
   await save();
   renderNotes();
+}
+
+// ---------- soil type ----------
+const soilType = id => SOIL_TYPES.find(t => t.id === id) || null;
+function renderSoilType() {
+  const t = soilType(plant.soilType), sp = speciesById(plant.species), g = sp ? soilType(soilDefault(sp)) : null;
+  $("soil-type").textContent = t ? `Soil type: ${t.name}`
+    : g ? `Soil type: not chosen. Suggested for ${sp.name}: ${g.name} (tap to choose)`
+    : "Soil type: not chosen (tap to choose)";
+  $("soil-type-desc").textContent = t ? `${t.recipe}. ${t.about}` : "";
+  $("soil-type-desc").hidden = !t;
+  $("soil-type-btn").textContent = t ? "Change soil type" : "Choose soil type";
+}
+async function pickSoilType() {
+  const sp = speciesById(plant.species), guess = sp ? soilDefault(sp) : null;
+  const body = document.createElement("div");
+  for (const t of SOIL_TYPES) {
+    const p = document.createElement("p");
+    p.className = "soil-opt";
+    p.innerHTML = "<b></b><span></span>";
+    p.querySelector("b").textContent = t.name + (t.id === guess ? "  (suggested)" : "");
+    p.querySelector("span").textContent = `${t.recipe}. ${t.about}`;
+    body.append(p);
+  }
+  const actions = SOIL_TYPES.map(t => ({ label: t.name, cls: t.id === plant.soilType ? "strong" : "", value: t.id }));
+  actions.push({ label: "Not chosen", value: "" }, { label: "Cancel", value: null });
+  const v = await modal({ title: "What soil does it like?", body, actions });
+  if (v === null) return;
+  plant.soilType = v || null;
+  await save(); renderSoilType();
 }
 
 // ---------- repotting ----------
@@ -1233,6 +1264,8 @@ $("repot-today-btn").onclick = repottedToday;
 $("repot-date-btn").onclick = pickRepotDate;
 $("repot-last").onclick = pickRepotDate;
 $("repot-need-btn").onclick = toggleNeedsRepot;
+$("soil-type-btn").onclick = pickSoilType;
+$("soil-type").onclick = pickSoilType;
 $("water-every").onclick = pickEvery;
 $("edit-btn").onclick = editNotes;
 $("notes-cancel").onclick = renderNotes;

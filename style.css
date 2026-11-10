@@ -185,6 +185,13 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
   background: var(--ink); color: var(--accent); border-radius: 8px;
 }
 
+/* Soil tab: soil type */
+#soil-type { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; }
+#soil-type-desc { color: var(--ink-soft); font-size: 21px; }
+#soil-type-box { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
+.soil-opt { margin: 8px 0; font-size: 20px; color: var(--ink-soft); text-align: left; }
+.soil-opt b { display: block; font-weight: normal; font-size: 22px; color: var(--ink); }
+
 /* Soil tab: repotting */
 #repot-last { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; }
 #repot-status { color: #ffe0ef; }

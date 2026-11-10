@@ -1,7 +1,7 @@
 // Plants, rooms and photos, kept on the phone in IndexedDB.
 // plant: { id, name, created, cover, photos: [photoId], species (id in SPECIES) or speciesName (own text),
 //          notes, water, sun, pest, dirt: [string], lastPest: "YYYY-MM-DD" | null,
-//          room (room id, just a label) | null, every (fewest days between waterings) | null, everyMax (most days; null = exactly `every`), lastWatered: "YYYY-MM-DD" | null, lastRepot: "YYYY-MM-DD" | null, needsRepot (marked by the owner),
+//          room (room id, just a label) | null, every (fewest days between waterings) | null, everyMax (most days; null = exactly `every`), lastWatered: "YYYY-MM-DD" | null, lastRepot: "YYYY-MM-DD" | null, needsRepot (marked by the owner), soilType (id from SOIL_TYPES) | null,
 //          u (edit time, ms), dirty (1 = not sent to the cloud yet) }
 // room:  { id, name, u, dirty }   (a label to group plants by; it used to carry a watering schedule)
 // photo: { id, plantId, type, created, blob (the original file, untouched) | null,
@@ -70,7 +70,7 @@ const Store = (() => {
     blank(name) {
       return { id: newId(), name, created: Date.now(), cover: null, photos: [], species: null, speciesName: null,
                notes: [], water: [], sun: [], pest: [], dirt: [], lastPest: null,
-               room: null, every: null, everyMax: null, lastWatered: null, lastRepot: null, needsRepot: false };
+               room: null, every: null, everyMax: null, lastWatered: null, lastRepot: null, needsRepot: false, soilType: null };
     },
 
     // ---- the app's own reads and writes ----

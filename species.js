@@ -600,3 +600,29 @@ const SPECIES = (() => {
 
 // Goes up whenever the care text changes; the app offers to refresh saved plants' notes.
 const CARE_VERSION = 4;
+
+// The soil types a plant can be given (plant.soilType holds the id).
+const SOIL_TYPES = [
+  { id: "chunky", name: "Fast-draining chunky aroid mix",
+    recipe: "1 part potting soil, 1 part orchid bark, 1 part perlite (plus a handful of charcoal)",
+    about: "Lots of air around the roots and it dries quickly. For climbers and epiphytes that hate wet feet." },
+  { id: "moist", name: "Moisture-retaining aroid mix",
+    recipe: "2 parts potting soil or coco coir, 1 part orchid bark, 1 part perlite, plus a handful of sphagnum moss",
+    about: "Holds steady moisture and still has air. For thirsty plants and velvet-leaved aroids." },
+  { id: "succ", name: "Succulent / cactus mix",
+    recipe: "Cactus mix with extra perlite or pumice (about 2 parts mix to 1 part grit)",
+    about: "Drains very fast and dries out between waterings. For succulents, cacti, and plants with rhizomes or corms." },
+  { id: "outdoor", name: "Outdoor potting mix",
+    recipe: "Container or patio-pot mix with compost and a little perlite",
+    about: "Heavier and holds more water. For pots outside and big, thirsty plants." },
+];
+
+// Which soil type a species suggests, read from its first soil note (null if it doesn't say).
+function soilDefault(sp) {
+  if (sp.id === "colocasia") return "outdoor";
+  const d = (sp.dirt[0] || "").toLowerCase();
+  if (/cactus|succulent|gritty|sandy/.test(d) && !/aroid/.test(d)) return "succ";
+  if (/moisture-holding|moist|standard potting mix|rich/.test(d)) return "moist";
+  if (/chunky|orchid bark|aroid|epiphyte|airy|well-draining mix/.test(d)) return "chunky";
+  return null;
+}

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#accdee">
+<title>Planty Book</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="art/icon-192.png">
+<link rel="apple-touch-icon" href="art/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<!-- The book: every plant -->
+<main id="book" class="screen">
+  <header class="panel bar">
+    <h1>Planty Book</h1>
+    <button class="icon-btn small" id="menu-btn" aria-label="Menu" data-icon="menu"></button>
+  </header>
+  <div id="book-body" class="book-body"></div>
+</main>
+
+<!-- One plant's page -->
+<main id="page" class="screen" hidden>
+  <div class="left">
+    <header class="panel bar">
+      <button class="icon-btn small" id="back-btn" aria-label="Back to the book" data-icon="back"></button>
+      <div class="titles">
+        <h1 id="plant-name" role="button" tabindex="0" title="Tap to rename">Plant Name</h1>
+        <button class="species-btn" id="species-btn">+ Add species</button>
+        <button class="species-btn" id="room-btn">+ Put in a room</button>
+      </div>
+      <button class="icon-btn small" id="lookup-btn" aria-label="Look it up online" data-icon="search"></button>
+    </header>
+    <nav class="topics" aria-label="Care topics">
+      <button class="icon-btn" data-topic="water" data-icon="drop" aria-label="Preferred watering"></button>
+      <button class="icon-btn" data-topic="sun" data-icon="sun" aria-label="Preferred sun"></button>
+      <button class="icon-btn" data-topic="pest" data-icon="bug" aria-label="Pest treatment"></button>
+      <button class="icon-btn" data-topic="dirt" data-icon="shovel" aria-label="Preferred dirt"></button>
+      <button class="icon-btn" id="gallery-btn" data-icon="camera" aria-label="Gallery options"></button>
+    </nav>
+    <section class="panel notes" id="notes">
+      <div class="notes-head">
+        <h2 id="notes-title">Notes</h2>
+        <button class="icon-btn small ghost" id="edit-btn" aria-label="Edit notes" data-icon="pencil"></button>
+      </div>
+      <div id="pest-box" hidden>
+        <p id="pest-last"></p>
+        <button class="pill" id="treated-btn">Treated today</button>
+      </div>
+      <div id="water-box" class="info-box" hidden>
+        <div><p id="water-last"></p><p id="water-next"></p></div>
+        <button class="pill" id="watered-btn">Watered today</button>
+      </div>
+      <div id="sun-box" hidden>
+        <button class="pill" id="meter-btn">Measure light here</button>
+      </div>
+      <ul id="notes-list"></ul>
+      <div id="notes-edit" hidden>
+        <textarea id="notes-text" rows="6" placeholder="One note per line"></textarea>
+        <div class="row">
+          <button class="pill" id="notes-cancel">Cancel</button>
+          <button class="pill strong" id="notes-save">Save</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <section class="panel photo-panel" id="photo-panel">
+    <div class="photo-frame" id="photo-frame">
+      <div class="photo-strip" id="photo-strip"></div>
+      <p class="photo-empty" id="photo-empty">No photos yet.<br>Tap the camera.</p>
+    </div>
+    <div class="dots" id="dots"></div>
+  </section>
+</main>
+
+<!-- Full-screen photo -->
+<div id="viewer" hidden><img id="viewer-img" alt=""></div>
+
+<!-- Light meter (the camera's exposure gives an estimate) -->
+<div id="meter" hidden>
+  <div class="panel meter-box">
+    <h2>Light meter</h2>
+    <div class="meter-view"><video id="meter-video" playsinline muted></video></div>
+    <p class="meter-read" id="meter-read">...</p>
+    <p class="meter-kind" id="meter-kind">Starting the camera</p>
+    <div class="meter-bar"><span id="meter-dot" hidden></span></div>
+    <div class="meter-scale"><span>dark</span><span>low</span><span>medium</span><span>bright</span><span>sun</span></div>
+    <p class="meter-want" id="meter-want"></p>
+    <p class="meter-help" id="meter-help">Hold your phone where the plant sits, camera facing the window. It's an estimate: good for comparing spots.</p>
+    <div class="row">
+      <button class="pill" id="meter-close">Close</button>
+      <button class="pill strong" id="meter-save" disabled>Save to Sunlight</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dialogs and option sheets -->
+<div id="modal" hidden>
+  <div class="panel modal-box" role="dialog" aria-modal="true">
+    <h2 id="modal-title"></h2>
+    <div id="modal-body"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<input type="file" id="pick-camera" accept="image/*" capture="environment" hidden>
+<input type="file" id="pick-gallery" accept="image/*" multiple hidden>
+<input type="file" id="pick-backup" accept="application/json,.json" hidden>
+
+<script src="icons.js"></script>
+<script src="species.js"></script>
+<script src="store.js"></script>
+<script src="sky.js"></script>
+<script src="meter.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

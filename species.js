@@ -18,59 +18,81 @@ const SPECIES = (() => {
   // kind(...) = sp(...) with a shared care template; `add` puts a kind's own notes first.
   const care = (water, sun, dirt) => ({ water, sun, dirt });
   const kind = (id, name, sci, aka, c, add = {}) =>
-    sp(id, name, sci, aka, [...(add.water || []), ...c.water], [...(add.sun || []), ...c.sun], [...(add.dirt || []), ...c.dirt]);
+    sp(id, name, sci, aka, [...(add.water || []), ...c.water], [...(add.sun || []), ...c.sun], [c.dirt[0], ...(add.dirt || []), ...c.dirt.slice(1)]);
   const PALE = "The pale parts brown easily if the soil stays wet";
 
   const MON_BIG = care(
     ["Water when the top 2 in. of soil is dry", "About once a week in summer, less in winter", DRAIN],
     ["Bright, indirect light", "Tolerates medium light but grows fewer splits", "Avoid harsh afternoon sun"],
-    [...AROID, "Give it a moss pole: leaves get bigger as it climbs"]);
+    ["Chunky aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite (a handful of charcoal is a bonus)", "Slightly acidic: pH about 5.5-6.5",
+     "Pot with drainage holes, only 1-2 in. wider than the roots", "Repot every 1-2 years in spring. A moss pole gives bigger leaves as it climbs"]);
   const MON_VAR = care(
     ["Water when the top 2 in. of soil is dry", PALE, DRAIN],
     ["Bright, indirect light: more than a green Monstera", "A little gentle morning sun is fine", "Too little light and it grows mostly-green leaves"],
-    [...AROID, "Give it a moss pole to climb", "Grows slower than a green Monstera"]);
+    ["Airy aroid mix: 1 part potting soil, 1 part orchid bark, 1-2 parts perlite or pumice",
+     "Variegated plants grow slowly and rot faster in wet soil: use a snug pot, not an oversized one", "Slightly acidic: pH about 5.5-6.5",
+     "Pot with drainage holes; give it a moss pole to climb"]);
   const MON_VINE = care(
     ["Water when the top 1 in. of soil is dry", "Likes to stay lightly moist", DRAIN],
     ["Medium to bright indirect light", "Avoid direct sun"],
-    [...AROID, "Give it a pole or plank to climb, or let it trail"]);
+    ["Medium-chunky aroid mix: 2 parts potting soil, 1 part orchid bark, 1 part perlite",
+     "Thin leaves like soil that holds a little more moisture than a big Monstera's mix", "Slightly acidic: pH about 5.5-6.5",
+     "Pot with drainage holes; give it a pole or plank to climb, or let it trail"]);
   const POTHOS = care(
     ["Water when the top 1-2 in. of soil is dry", "Drooping leaves mean it's thirsty", DRAIN],
     ["Low to bright indirect light", "Grows fastest in bright, indirect light", "Avoid harsh direct sun"],
-    [...AIRY, "Let it trail, or train it up a pole"]);
+    ["Standard potting mix with about 1/3 perlite (2 parts mix, 1 part perlite)", "Very forgiving: no bark needed, though a handful helps drainage",
+     "Slightly acidic: pH about 6-6.5", "Pot with drainage holes; repot only when the roots fill the pot", "Let it trail, or train it up a pole"]);
   const POTHOS_VAR = care(
     ["Water when the top 1-2 in. of soil is dry", "Drooping leaves mean it's thirsty", DRAIN],
     ["Bright, indirect light keeps the variegation", "In low light it slows down and turns greener", "Avoid harsh direct sun"],
-    [...AIRY, "Let it trail, or train it up a pole"]);
+    ["Standard potting mix with about 1/3 perlite (2 parts mix, 1 part perlite)", "Variegated pothos grow more slowly than green ones: don't oversize the pot",
+     "Slightly acidic: pH about 6-6.5", "Pot with drainage holes; repot only when the roots fill the pot", "Let it trail, or train it up a pole"]);
+  // Epipremnum pinnatum types (Cebu Blue, Baltic Blue...) like it chunkier than golden pothos
+  const POTHOS_PIN = care(POTHOS.water, POTHOS.sun,
+    ["Chunkier than golden pothos: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Slightly acidic: pH about 5.5-6.5", "Pot with drainage holes"]);
+  const POTHOS_PIN_VAR = care(POTHOS_VAR.water, POTHOS_VAR.sun,
+    ["Chunkier than golden pothos: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Variegated types grow slowly: don't oversize the pot", "Slightly acidic: pH about 5.5-6.5", "Pot with drainage holes"]);
   const SCIND = care(
     ["Let the top 2 in. of soil dry out", "Curling leaves mean it's thirsty", DRAIN],
     ["Medium to bright indirect light", "Avoid direct sun"],
-    [...AROID, "Let it trail, or give it a pole to climb"]);
+    ["Gritty aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite",
+     "A slow grower that rots if kept wet: use a snug pot with drainage holes (terracotta helps)", "Slightly acidic: pH about 6-6.5",
+     "Let it trail, or give it a pole to climb"]);
   const PH_VINE = care(
     ["Water when the top 1-2 in. of soil is dry", DRAIN],
     ["Medium to bright indirect light", "Tolerates low light, with smaller leaves"],
-    [...AIRY, "Let it trail, or give it a pole to climb"]);
+    ["Well-draining mix: 2 parts potting soil, 1 part perlite, 1 part orchid bark", "Forgiving. Slightly acidic: pH about 5.5-6.5", "Pot with drainage holes",
+     "Let it trail, or give it a pole to climb"]);
   const PH_CLIMB = care(
     ["Water when the top 1-2 in. of soil is dry", DRAIN],
     ["Bright, indirect light", "Avoid harsh direct sun"],
-    [...AROID, "Give it a moss pole: leaves grow bigger as it climbs"]);
+    ["Chunky aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite, plus a handful of charcoal", "Slightly acidic: pH about 5.5-6.5",
+     "Pot with drainage holes; a snug pot dries faster and avoids rot", "Give it a moss pole: leaves grow bigger as it climbs"]);
   const PH_SELF = care(
     ["Water when the top 1-2 in. of soil is dry", DRAIN],
     ["Medium to bright indirect light", "Avoid harsh direct sun"],
-    [...AROID, "Grows upright on its own: no pole needed"]);
+    ["Sturdy aroid mix: 2 parts potting soil, 1 part orchid bark, 1 part perlite",
+     "A heavy feeder that dries fast when root-bound: repot yearly into a pot only 2 in. wider", "Slightly acidic: pH about 5.5-6.5",
+     "Pot with drainage holes; it grows upright, so no pole is needed"]);
   const PH_VAR = care(
     ["Water when the top 1-2 in. of soil is dry", PALE, DRAIN],
     ["Bright, indirect light keeps the variegation", "A little gentle morning sun is fine"],
-    [...AROID, "If it grows all-green leaves, cut back to the last variegated one"]);
+    ["Airy aroid mix: 1 part potting soil, 1 part orchid bark, 1-2 parts perlite",
+     "Variegated plants grow slowly and rot faster in wet soil: use a snug pot", "Slightly acidic: pH about 5.5-6.5",
+     "Pot with drainage holes; if it grows all-green leaves, cut back to the last variegated one"]);
   const VELVET = ["Keep lightly moist: water when the top 1 in. is dry", "Never let it dry out completely", "Likes humidity (60%+): a humidifier helps"];
   const VELVET_SUN = ["Medium to bright indirect light", "No direct sun: the velvet leaves scorch"];
-  const VELVET_MIX = "Very airy mix: orchid bark, perlite, sphagnum moss and a little soil";
-  const PH_VELVET = care(VELVET, VELVET_SUN, [VELVET_MIX, "Give it a moss pole to climb"]);
+  const VELVET_MIX = "Airy but moisture-holding mix: 1 part potting soil or coco coir, 2 parts orchid bark, 1 part perlite, plus a handful of sphagnum moss";
+  const PH_VELVET = care(VELVET, VELVET_SUN,
+    [VELVET_MIX, "Roots need air as well as moisture: never use dense soil", "Slightly acidic: pH about 5.5-6.5", "Pot with drainage holes; give it a moss pole to climb"]);
   const PH_CRAWL = care(VELVET, VELVET_SUN,
-    [VELVET_MIX, "Wide, shallow pot: it crawls along the surface", "Keep the rhizome on top of the soil, not buried"]);
+    [VELVET_MIX, "Use a wide, shallow pot: it crawls along the surface", "Keep the thick stem lying on top of the soil, with only the roots buried", "Slightly acidic: pH about 5.5-6.5"]);
   const THAUM = care(
     ["Water when the top 2 in. of soil is dry", DRAIN],
     ["Bright light; some direct sun is fine"],
-    ["Rich, well-draining potting mix", "Pot with drainage holes", "Grows wide: give it room"]);
+    ["Rich, well-draining mix: 2 parts potting soil, 1 part perlite, 1 part orchid or pine bark", "Slightly acidic: pH about 5.5-6.5",
+     "Big, heavy plant: use a wide, sturdy pot with drainage holes", "Repot every 2 years; give it room to spread"]);
 
   // Monstera
   kind("monstera-deliciosa", "Monstera", "Monstera deliciosa", ["swiss cheese plant", "split-leaf philodendron", "monstera deliciosa"], MON_BIG);
@@ -89,7 +111,8 @@ const SPECIES = (() => {
        { water: [PALE], sun: ["Needs brighter indirect light than a green adansonii"] });
   kind("monstera-obliqua", "Monstera Obliqua", "Monstera obliqua", ["obliqua"], MON_VINE,
        { water: ["Paper-thin leaves: never let it dry out", "Needs high humidity (70%+): a cabinet or terrarium is best"],
-         dirt: ["Very rare: many plants sold as obliqua are adansonii"] });
+         dirt: ["Very airy mix with long-fibre sphagnum moss: its paper-thin leaves need steady moisture and air at the roots",
+                "Very rare: many plants sold as obliqua are adansonii"] });
   kind("monstera-acuminata", "Monstera Acuminata", "Monstera acuminata", ["acuminata"], MON_VINE);
   kind("monstera-dubia", "Monstera Dubia", "Monstera dubia", ["dubia", "shingle plant"], MON_VINE,
        { dirt: ["Young leaves 'shingle' flat against a plank or board"] });
@@ -129,15 +152,15 @@ const SPECIES = (() => {
   kind("pothos-glacier", "Glacier Pothos", "Epipremnum aureum 'Glacier'", ["glacier", "pothos"], POTHOS_VAR);
   kind("pothos-jessenia", "Jessenia Pothos", "Epipremnum aureum 'Jessenia'", ["jessenia", "pothos"], POTHOS_VAR);
   kind("pothos-harlequin", "Harlequin Pothos", "Epipremnum aureum 'Harlequin'", ["harlequin", "pothos"], POTHOS_VAR, { water: [PALE] });
-  kind("epipremnum-pinnatum", "Dragon Tail Pothos", "Epipremnum pinnatum", ["dragon tail", "pinnatum", "pothos"], POTHOS,
+  kind("epipremnum-pinnatum", "Dragon Tail Pothos", "Epipremnum pinnatum", ["dragon tail", "pinnatum", "pothos"], POTHOS_PIN,
        { dirt: ["Leaves split as it matures on a moss pole"] });
-  kind("cebu-blue-pothos", "Cebu Blue Pothos", "Epipremnum pinnatum 'Cebu Blue'", ["cebu blue", "pothos", "pinnatum"], POTHOS,
+  kind("cebu-blue-pothos", "Cebu Blue Pothos", "Epipremnum pinnatum 'Cebu Blue'", ["cebu blue", "pothos", "pinnatum"], POTHOS_PIN,
        { sun: ["Bright, indirect light brings out the silvery blue"], dirt: ["Leaves split as it matures on a moss pole"] });
-  kind("pothos-baltic-blue", "Baltic Blue Pothos", "Epipremnum pinnatum 'Baltic Blue'", ["baltic blue", "pothos", "pinnatum"], POTHOS,
+  kind("pothos-baltic-blue", "Baltic Blue Pothos", "Epipremnum pinnatum 'Baltic Blue'", ["baltic blue", "pothos", "pinnatum"], POTHOS_PIN,
        { dirt: ["Splits younger than most pothos, especially on a pole"] });
-  kind("pothos-skeleton-key", "Skeleton Key Pothos", "Epipremnum pinnatum 'Skeleton Key'", ["skeleton key", "pothos", "pinnatum"], POTHOS);
-  kind("pothos-pinnatum-marble", "Marble Pinnatum", "Epipremnum pinnatum 'Marble'", ["pinnatum marble", "marble planet", "pothos"], POTHOS_VAR);
-  kind("pothos-pinnatum-albo", "Pinnatum Albo", "Epipremnum pinnatum 'Albo Variegata'", ["pinnatum albo", "albo pothos", "pothos"], POTHOS_VAR, { water: [PALE] });
+  kind("pothos-skeleton-key", "Skeleton Key Pothos", "Epipremnum pinnatum 'Skeleton Key'", ["skeleton key", "pothos", "pinnatum"], POTHOS_PIN);
+  kind("pothos-pinnatum-marble", "Marble Pinnatum", "Epipremnum pinnatum 'Marble'", ["pinnatum marble", "marble planet", "pothos"], POTHOS_PIN_VAR);
+  kind("pothos-pinnatum-albo", "Pinnatum Albo", "Epipremnum pinnatum 'Albo Variegata'", ["pinnatum albo", "albo pothos", "pothos"], POTHOS_PIN_VAR, { water: [PALE] });
   kind("satin-pothos", "Satin Pothos", "Scindapsus pictus 'Argyraeus'", ["silver pothos", "silver philodendron", "scindapsus", "argyraeus", "pothos"], SCIND);
   kind("scindapsus-exotica", "Scindapsus Exotica", "Scindapsus pictus 'Exotica'", ["exotica", "satin pothos", "scindapsus", "pothos"], SCIND);
   kind("scindapsus-silvery-ann", "Silvery Ann", "Scindapsus pictus 'Silvery Ann'", ["silvery ann", "satin pothos", "scindapsus", "pothos"], SCIND);
@@ -243,28 +266,47 @@ const SPECIES = (() => {
   // ---- Other aroids ----
   sp("zz-plant", "ZZ Plant", "Zamioculcas zamiifolia", ["zanzibar gem", "zz", "raven zz"],
      ["Let the soil dry out completely", "About every 2-3 weeks; less in winter", "Overwatering rots its roots: when unsure, wait"],
-     ["Low to bright indirect light", "Avoid harsh direct sun"], AIRY);
+     ["Low to bright indirect light", "Avoid harsh direct sun"],
+     ["Gritty, fast-draining mix: 1 part potting soil, 1 part perlite or pumice (or cactus mix with a little bark)",
+      "Thick rhizomes store water, so they rot in wet soil", "Slightly acidic to neutral: pH about 6-7",
+      "Snug pot with drainage holes (terracotta helps); keep the rhizomes at soil level, not buried deep"]);
   sp("peace-lily", "Peace Lily", "Spathiphyllum wallisii", ["spathiphyllum", "spath"],
      ["Keep the soil evenly moist", "It droops dramatically when thirsty and perks up after a drink", "Filtered water helps prevent brown tips"],
-     ["Low to medium indirect light", "More light means more flowers", "No direct sun"], MOIST);
+     ["Low to medium indirect light", "More light means more flowers", "No direct sun"],
+     ["Moisture-holding potting mix with some drainage: 2 parts potting soil, 1 part perlite or orchid bark", "Slightly acidic: pH about 5.8-6.5",
+      "Pot with drainage holes; it flowers better when slightly root-bound"]);
   sp("chinese-evergreen", "Chinese Evergreen", "Aglaonema", ["aglaonema", "red aglaonema", "silver bay"],
      ["Water when the top 1-2 in. of soil is dry", DRAIN],
-     ["Low to medium indirect light", "Pink and red kinds like brighter light"], AIRY);
+     ["Low to medium indirect light", "Pink and red kinds like brighter light"],
+     ["Standard potting mix with perlite: 3 parts mix, 1 part perlite", "Slightly acidic: pH about 5.6-6.5",
+      "Pot with drainage holes; it is happy slightly root-bound"]);
   sp("dieffenbachia", "Dumb Cane", "Dieffenbachia", ["dieffenbachia", "camille"],
      ["Water when the top 1-2 in. of soil is dry", DRAIN],
-     ["Medium to bright indirect light", "Rotate it so it grows evenly"], AIRY);
+     ["Medium to bright indirect light", "Rotate it so it grows evenly"],
+     ["Rich, well-draining mix: 3 parts potting soil, 1 part perlite", "Slightly acidic: pH about 6-6.5",
+      "Pot with drainage holes; repot yearly while young"]);
   sp("arrowhead-plant", "Arrowhead Plant", "Syngonium podophyllum", ["syngonium", "arrowhead vine", "nephthytis"],
      ["Water when the top 1 in. of soil is dry", DRAIN],
-     ["Medium to bright indirect light", "Pink kinds need brighter light"], AROID);
+     ["Medium to bright indirect light", "Pink kinds need brighter light"],
+     ["Light, slightly chunky mix: 2 parts potting soil, 1 part perlite, 1 part orchid bark", "Slightly acidic: pH about 6-6.5",
+      "Pot with drainage holes; let it trail, or give it a pole to climb"]);
   sp("anthurium", "Anthurium", "Anthurium andraeanum", ["flamingo flower", "laceleaf", "painter's palette"],
      ["Water when the top 1-2 in. of soil is dry", DRAIN],
-     ["Bright, indirect light for flowers", "Avoid direct sun"], ["Chunky mix: orchid bark, perlite and some potting soil", "Pot with drainage holes"]);
+     ["Bright, indirect light for flowers", "Avoid direct sun"], ["Very chunky epiphyte mix: equal parts orchid bark, coco chips and perlite, with a little potting soil",
+      "Its roots need lots of air: never use dense soil", "Slightly acidic: pH about 5.5-6.5",
+      "Small pot with drainage holes; repot when the roots circle"]);
   sp("alocasia-polly", "Alocasia Polly", "Alocasia × amazonica 'Polly'", ["african mask", "elephant ear", "alocasia", "kris plant"],
      ["Let the top 1-2 in. dry, then water", "Can go dormant in winter: water much less then", "Likes humidity"],
-     ["Bright, indirect light", "Avoid direct sun"], AROID);
+     ["Bright, indirect light", "Avoid direct sun"],
+     ["Airy, slightly moist mix: 1 part potting soil (or coco coir), 1 part perlite, 1 part orchid bark",
+      "It grows from a corm that rots in soggy soil", "Slightly acidic: pH about 5.5-6.5",
+      "Small, snug pot with drainage holes; keep it nearly dry when dormant in winter"]);
   sp("colocasia", "Elephant Ear", "Colocasia esculenta", ["taro", "colocasia"],
      ["Keep the soil consistently moist", "Thirsty plant, especially in summer"],
-     ["Bright light; some direct sun is fine"], MOIST);
+     ["Bright light; some direct sun is fine"],
+     ["Rich, heavy, moisture-holding mix: potting soil with compost and a little perlite",
+      "It loves wet feet: in summer it can stand in a shallow saucer of water", "pH about 5.5-7",
+      "Large pot with drainage holes; a heavy feeder"]);
 
   // ---- Snake plants, dracaenas, yucca ----
   sp("snake-plant", "Snake Plant", "Dracaena trifasciata", ["sansevieria", "mother-in-law's tongue", "laurentii", "whale fin", "cylindrica"],

@@ -204,6 +204,18 @@ async function migrateWatering() {
   await Store.setMeta("waterMigrated", 1);
 }
 
+// Soil notes for the aroids were made specific (mixes, pH, pot). A plant whose soil notes still start with one of the
+// old automatic lines is brought up to date, once. Notes you wrote yourself are left alone.
+const OLD_SOIL_FIRST_LINES = new Set(["Chunky aroid mix: potting soil, orchid bark and perlite", "Well-draining potting mix with extra perlite", "Very airy mix: orchid bark, perlite, sphagnum moss and a little soil", "Rich, well-draining potting mix", "Chunky mix: orchid bark, perlite and some potting soil"]);
+async function migrateSoil() {
+  if (await Store.getMeta("soilV2")) return;
+  for (const p of await Store.allPlants()) {
+    const s = speciesById(p.species);
+    if (s && p.dirt.length && OLD_SOIL_FIRST_LINES.has(p.dirt[0])) { p.dirt = [...s.dirt]; await Store.putPlant(p); }
+  }
+  await Store.setMeta("soilV2", 1);
+}
+
 // ---------- the book ----------
 let groupMode = (() => { try { return localStorage.getItem("pb.group") === "room" ? "room" : "water"; } catch (e) { return "water"; } })();
 
@@ -1083,7 +1095,7 @@ const startHash = location.hash.slice(1);
 const pairing = startHash.startsWith("pair=") ? startHash : null;     // a pairing link, not a plant
 const startId = pairing ? "" : startHash;
 history.replaceState({}, "", location.pathname + location.search);
-migrateWatering().then(showBook).then(() => {
+migrateWatering().then(migrateSoil).then(showBook).then(() => {
   if (startId) openPlant(startId);
   if (pairing) connectFromLink(pairing);
   Sync.kick(500);

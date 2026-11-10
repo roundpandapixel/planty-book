@@ -12,6 +12,7 @@
   --btn-on: rgba(118, 136, 118, 0.92);
   --ink: #ffffff;
   --ink-soft: rgba(255, 255, 255, 0.78);
+  --accent: #6f8268;                   /* text on the white buttons; set by the theme */
   --radius: 16px;
   --gap: 12px;
   --gutter: 16px;
@@ -131,7 +132,7 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
   border: 2px solid var(--ink); border-radius: 10px;
   background: transparent; cursor: pointer;
 }
-.pill.strong { background: var(--ink); color: #6f8268; }
+.pill.strong { background: var(--ink); color: var(--accent); }
 .pill.danger { border-color: #ffd0e6; color: #ffd0e6; }
 
 /* Photo panel */
@@ -236,7 +237,7 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
 }
 #meter-dot {
   position: absolute; top: -5px; width: 6px; height: 24px; margin-left: -3px;
-  background: var(--ink); box-shadow: 0 0 0 2px #6f8268;
+  background: var(--ink); box-shadow: 0 0 0 2px var(--accent);
 }
 .meter-scale { display: flex; justify-content: space-between; font-size: 18px; color: var(--ink-soft); padding-top: 4px; }
 .meter-want { margin: 10px 0 0; text-align: center; }

@@ -788,6 +788,28 @@ async function refreshView() {
 }
 Sync.onChange = refreshView;
 
+// ---------- themes ----------
+const clock12 = m => new Date(2000, 0, 1, Math.floor(m / 60) % 24, Math.round(m % 60)).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+async function themeMenu() {
+  const t = Sky.times();
+  const body = document.createElement("div");
+  body.innerHTML = `<p></p><p class="meter-help" style="text-align:left"></p>`;
+  body.children[0].textContent = `Today: sunrise ${clock12(t.rise)}, sunset ${clock12(t.set)}`;
+  body.children[1].textContent = (t.exact ? "Worked out from your location. " : "Estimated from your date and time zone. ") +
+    "The sky follows this device's clock: dawn and dusk glow, then stars and the moon at night.";
+  const actions = Sky.themes().map(th => ({ label: th.name + (th.key === Sky.theme ? "  ✓" : ""), cls: th.key === Sky.theme ? "strong" : "", value: th.key }));
+  actions.push({ label: t.exact ? "Use the time-zone estimate" : "Use my location for exact times", value: "loc" });
+  actions.push({ label: "Close", value: null });
+  const v = await modal({ title: "Theme", body, actions });
+  if (!v) return;
+  if (v === "loc") {
+    if (t.exact) Sky.clearLocation();
+    else try { await Sky.useLocation(); } catch (e) { await notice("Location", e.message); }
+  } else Sky.setTheme(v);
+  themeMenu();                                  // stay open so the themes can be flipped through
+}
+
 async function menu() {
   const v = await modal({
     title: "Planty Book",
@@ -796,11 +818,13 @@ async function menu() {
       { label: `Sync: ${Sync.ready ? syncLine() : "not available yet"}`, cls: "strong", value: "sync" },
       { label: "Save a backup file", value: "save" },
       { label: "Load a backup file", value: "load" },
+      { label: `Theme: ${Sky.themes().find(x => x.key === Sky.theme).name}`, value: "theme" },
       { label: Sky.motionOn() ? "Clouds and petals: on" : "Clouds and petals: off", value: "motion" },
       { label: "Close", value: null },
     ],
   });
-  if (v === "sync") await syncMenu();
+  if (v === "theme") await themeMenu();
+  else if (v === "sync") await syncMenu();
   else if (v === "save") saveBackup();
   else if (v === "load") $("pick-backup").click();
   else if (v === "motion") Sky.setMotion(!Sky.motionOn());

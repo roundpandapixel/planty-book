@@ -238,6 +238,85 @@ async function migrateSoil() {
   await Store.setMeta("soilV2", 1);
 }
 
+// ---------- refreshing saved plants' care notes ----------
+// A plant copies its species' Watering and Soil notes when the species is chosen. When the species list improves,
+// saved plants keep the old copy. This brings them up to date: lines the app filled in itself are replaced, and lines
+// the owner wrote are kept underneath. (LEGACY_CARE holds fingerprints of every line earlier versions filled in.)
+const h32 = t => { let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(36); };
+let autoLines = null;
+function isAutoLine(line) {
+  if (!autoLines) {
+    autoLines = new Set(LEGACY_CARE);
+    for (const sp of SPECIES) for (const k of ["water", "dirt"]) for (const l of sp[k]) autoLines.add(h32(l));
+  }
+  return autoLines.has(h32(line));
+}
+// What the plant's Watering and Soil notes would become (null if it has no species from the list).
+function refreshedCare(p) {
+  const sp = speciesById(p.species);
+  if (!sp) return null;
+  const out = {};
+  for (const k of ["water", "dirt"]) {
+    const mine = (p[k] || []).filter(l => !isAutoLine(l) && !sp[k].includes(l));
+    out[k] = [...sp[k], ...mine];
+  }
+  return out;
+}
+const sameLines = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+// The plants whose notes would change, with what they would become.
+const careChanges = plants => plants.map(p => ({ p, next: refreshedCare(p) }))
+  .filter(c => c.next && !(sameLines(c.next.water, c.p.water || []) && sameLines(c.next.dirt, c.p.dirt || [])));
+
+async function applyCareUpdate(list) {
+  for (const { p, next } of list) {
+    p.careBefore = { water: p.water || [], dirt: p.dirt || [], at: today() };     // so it can be undone
+    p.water = next.water; p.dirt = next.dirt;
+    await Store.putPlant(p);
+  }
+}
+
+async function careUpdateDialog(list, intro) {
+  const names = list.slice(0, 8).map(c => c.p.name);
+  const more = list.length > names.length ? ` and ${list.length - names.length} more` : "";
+  const body = document.createElement("div");
+  body.innerHTML = `<p></p><p class="meter-help" style="text-align:left"></p>`;
+  body.children[0].textContent = (intro ? intro + " " : "") +
+    `${list.length} plant${list.length === 1 ? " has" : "s have"} older Watering and Soil notes: ${names.join(", ")}${more}.`;
+  body.children[1].textContent = "Updating replaces those two kinds of notes with the latest for each plant's species (specific day ranges, humidity, soil mixes). Lines you wrote yourself are kept underneath. Each plant remembers its old notes, so you can undo this from the menu.";
+  const v = await modal({
+    title: "Update care notes", body,
+    actions: [{ label: `Update ${list.length} plant${list.length === 1 ? "" : "s"}`, cls: "strong", value: true }, { label: "Not now", value: null }],
+  });
+  if (!v) return false;
+  await applyCareUpdate(list);
+  return true;
+}
+
+// Once for each version of the care text: offer to bring saved plants up to date.
+async function offerCareUpdate() {
+  if ((await Store.getMeta("careAsked")) >= CARE_VERSION) return;
+  const list = careChanges(await Store.allPlants());
+  if (list.length) {
+    const done = await careUpdateDialog(list, "The care notes for houseplants got better.");
+    if (done) { await notice("Updated", "Your plants now have the new Watering and Soil notes."); showBook(); }
+  }
+  await Store.setMeta("careAsked", CARE_VERSION);
+}
+
+async function careMenu() {
+  const list = careChanges(await Store.allPlants());
+  if (!list.length) { await notice("Care notes", "Every plant already has the latest Watering and Soil notes for its species."); return; }
+  if (await careUpdateDialog(list, "")) { await notice("Updated", "Your plants now have the new Watering and Soil notes."); showBook(); }
+}
+
+async function undoCareUpdate() {
+  const list = (await Store.allPlants()).filter(p => p.careBefore);
+  if (!list.length) return;
+  if (!await confirmBox("Undo the update?", `${list.length} plant${list.length === 1 ? "" : "s"} will get back the Watering and Soil notes they had before. Edits you made since are lost.`, "Undo")) return;
+  for (const p of list) { p.water = p.careBefore.water; p.dirt = p.careBefore.dirt; delete p.careBefore; await Store.putPlant(p); }
+  showBook();
+}
+
 // ---------- the book ----------
 let groupMode = (() => { try { return localStorage.getItem("pb.group") === "room" ? "room" : "water"; } catch (e) { return "water"; } })();
 
@@ -472,6 +551,7 @@ function editNotes() {
 async function saveNotes() {
   plant[topic] = $("notes-text").value.split("\n")
     .map(s => s.replace(/^\s*[•\-*]\s*/, "").trim()).filter(Boolean);
+  if (topic === "water" || topic === "dirt") delete plant.careBefore;
   await save();
   renderNotes();
 }
@@ -995,6 +1075,7 @@ async function themeMenu() {
 }
 
 async function menu() {
+  const undoable = (await Store.allPlants()).some(p => p.careBefore);
   const v = await modal({
     title: "Planty Book",
     body: "<p>Your plants live on your devices. Turn on Sync to share them between your phone and PC, and keep a backup now and then.</p>",
@@ -1002,12 +1083,16 @@ async function menu() {
       { label: `Sync: ${Sync.ready ? syncLine() : "not available yet"}`, cls: "strong", value: "sync" },
       { label: "Save a backup file", value: "save" },
       { label: "Load a backup file", value: "load" },
+      { label: "Update care notes", value: "care" },
+      ...(undoable ? [{ label: "Undo the care-notes update", value: "undocare" }] : []),
       { label: `Theme: ${Sky.themes().find(x => x.key === Sky.theme).name}`, value: "theme" },
       { label: Sky.motionOn() ? "Clouds and petals: on" : "Clouds and petals: off", value: "motion" },
       { label: "Close", value: null },
     ],
   });
-  if (v === "theme") await themeMenu();
+  if (v === "care") await careMenu();
+  else if (v === "undocare") await undoCareUpdate();
+  else if (v === "theme") await themeMenu();
   else if (v === "sync") await syncMenu();
   else if (v === "save") saveBackup();
   else if (v === "load") $("pick-backup").click();
@@ -1125,6 +1210,7 @@ migrateWatering().then(migrateSoil).then(showBook).then(() => {
   if (startId) openPlant(startId);
   if (pairing) connectFromLink(pairing);
   Sync.kick(500);
+  offerCareUpdate();
 });
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http"))

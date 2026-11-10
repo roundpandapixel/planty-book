@@ -22,29 +22,46 @@ const SPECIES = (() => {
   const PALE = "The pale parts brown easily if the soil stays wet";
 
   const MON_BIG = care(
-    ["Water when the top 2 in. of soil is dry", "About once a week in summer, less in winter", DRAIN],
+    ["Water when the top 2 in. of soil is dry: about every 7-10 days in spring and summer, every 10-14 days in winter",
+     DRAIN,
+     "Likes humidity of 50% or more; wipe the leaves now and then so they can breathe",
+     "Tap water is usually fine; if the leaf tips brown, use filtered or rain water",
+     "Yellowing leaves usually mean too much water; crispy edges mean too dry or too little humidity"],
     ["Bright, indirect light", "Tolerates medium light but grows fewer splits", "Avoid harsh afternoon sun"],
     ["Chunky aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite (a handful of charcoal is a bonus)", "Slightly acidic: pH about 5.5-6.5",
      "Pot with drainage holes, only 1-2 in. wider than the roots", "Repot every 1-2 years in spring. A moss pole gives bigger leaves as it climbs"]);
   const MON_VAR = care(
-    ["Water when the top 2 in. of soil is dry", PALE, DRAIN],
+    ["Water when the top 2-3 in. of soil is dry: about every 8-12 days in summer, every 12-18 days in winter",
+     PALE,
+     DRAIN,
+     "Variegated plants have less chlorophyll, so they use less water: when unsure, wait a day",
+     "Likes humidity of 50% or more"],
     ["Bright, indirect light: more than a green Monstera", "A little gentle morning sun is fine", "Too little light and it grows mostly-green leaves"],
     ["Airy aroid mix: 1 part potting soil, 1 part orchid bark, 1-2 parts perlite or pumice",
      "Variegated plants grow slowly and rot faster in wet soil: use a snug pot, not an oversized one", "Slightly acidic: pH about 5.5-6.5",
      "Pot with drainage holes; give it a moss pole to climb"]);
   const MON_VINE = care(
-    ["Water when the top 1 in. of soil is dry", "Likes to stay lightly moist", DRAIN],
+    ["Water when the top 1 in. of soil is dry: about every 5-7 days in summer, every 7-10 days in winter",
+     "Thin leaves like steady, light moisture, but never soggy soil",
+     DRAIN,
+     "Likes humidity of 60% or more"],
     ["Medium to bright indirect light", "Avoid direct sun"],
     ["Medium-chunky aroid mix: 2 parts potting soil, 1 part orchid bark, 1 part perlite",
      "Thin leaves like soil that holds a little more moisture than a big Monstera's mix", "Slightly acidic: pH about 5.5-6.5",
      "Pot with drainage holes; give it a pole or plank to climb, or let it trail"]);
   const POTHOS = care(
-    ["Water when the top 1-2 in. of soil is dry", "Drooping leaves mean it's thirsty", DRAIN],
+    ["Water when the top 2 in. of soil is dry: about every 7-10 days, every 10-14 days in winter",
+     "Drooping leaves mean it's thirsty and it perks up within hours; yellow leaves mean too much water",
+     DRAIN,
+     "Forgiving: better to water a little late than too often"],
     ["Low to bright indirect light", "Grows fastest in bright, indirect light", "Avoid harsh direct sun"],
     ["Standard potting mix with about 1/3 perlite (2 parts mix, 1 part perlite)", "Very forgiving: no bark needed, though a handful helps drainage",
      "Slightly acidic: pH about 6-6.5", "Pot with drainage holes; repot only when the roots fill the pot", "Let it trail, or train it up a pole"]);
   const POTHOS_VAR = care(
-    ["Water when the top 1-2 in. of soil is dry", "Drooping leaves mean it's thirsty", DRAIN],
+    ["Water when the top 2 in. of soil is dry: about every 7-10 days, every 10-14 days in winter",
+     "Drooping leaves mean it's thirsty and it perks up within hours; yellow leaves mean too much water",
+     DRAIN,
+     "Variegated types use a little less water than green ones"],
     ["Bright, indirect light keeps the variegation", "In low light it slows down and turns greener", "Avoid harsh direct sun"],
     ["Standard potting mix with about 1/3 perlite (2 parts mix, 1 part perlite)", "Variegated pothos grow more slowly than green ones: don't oversize the pot",
      "Slightly acidic: pH about 6-6.5", "Pot with drainage holes; repot only when the roots fill the pot", "Let it trail, or train it up a pole"]);
@@ -54,34 +71,52 @@ const SPECIES = (() => {
   const POTHOS_PIN_VAR = care(POTHOS_VAR.water, POTHOS_VAR.sun,
     ["Chunkier than golden pothos: 1 part potting soil, 1 part orchid bark, 1 part perlite", "Variegated types grow slowly: don't oversize the pot", "Slightly acidic: pH about 5.5-6.5", "Pot with drainage holes"]);
   const SCIND = care(
-    ["Let the top 2 in. of soil dry out", "Curling leaves mean it's thirsty", DRAIN],
+    ["Let the top 2 in. of soil dry out: about every 10-14 days, every 14-21 days in winter",
+     "Curling leaves mean it's thirsty; yellowing means too wet",
+     DRAIN,
+     "Thick leaves store water, so underwater rather than overwater"],
     ["Medium to bright indirect light", "Avoid direct sun"],
     ["Gritty aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite",
      "A slow grower that rots if kept wet: use a snug pot with drainage holes (terracotta helps)", "Slightly acidic: pH about 6-6.5",
      "Let it trail, or give it a pole to climb"]);
   const PH_VINE = care(
-    ["Water when the top 1-2 in. of soil is dry", DRAIN],
+    ["Water when the top 1-2 in. of soil is dry: about every 7-10 days, every 10-14 days in winter",
+     DRAIN,
+     "Droopy, curling leaves mean thirsty; likes humidity of 40-60%",
+     "Tap water is fine for most; let it sit overnight if yours is heavily treated"],
     ["Medium to bright indirect light", "Tolerates low light, with smaller leaves"],
     ["Well-draining mix: 2 parts potting soil, 1 part perlite, 1 part orchid bark", "Forgiving. Slightly acidic: pH about 5.5-6.5", "Pot with drainage holes",
      "Let it trail, or give it a pole to climb"]);
   const PH_CLIMB = care(
-    ["Water when the top 1-2 in. of soil is dry", DRAIN],
+    ["Water when the top 2 in. of soil is dry: about every 7-10 days in summer, every 10-14 days in winter",
+     DRAIN,
+     "Likes humidity of 50% or more",
+     "Keep a moss pole slightly damp so its aerial roots grab on"],
     ["Bright, indirect light", "Avoid harsh direct sun"],
     ["Chunky aroid mix: 1 part potting soil, 1 part orchid bark, 1 part perlite, plus a handful of charcoal", "Slightly acidic: pH about 5.5-6.5",
      "Pot with drainage holes; a snug pot dries faster and avoids rot", "Give it a moss pole: leaves grow bigger as it climbs"]);
   const PH_SELF = care(
-    ["Water when the top 1-2 in. of soil is dry", DRAIN],
+    ["Water when the top 2 in. of soil is dry: about every 7-10 days in summer, every 10-14 days in winter",
+     DRAIN,
+     "A heavy drinker in summer when root-bound: check more often",
+     "Water the soil, not the centre of the plant"],
     ["Medium to bright indirect light", "Avoid harsh direct sun"],
     ["Sturdy aroid mix: 2 parts potting soil, 1 part orchid bark, 1 part perlite",
      "A heavy feeder that dries fast when root-bound: repot yearly into a pot only 2 in. wider", "Slightly acidic: pH about 5.5-6.5",
      "Pot with drainage holes; it grows upright, so no pole is needed"]);
   const PH_VAR = care(
-    ["Water when the top 1-2 in. of soil is dry", PALE, DRAIN],
+    ["Water when the top 2 in. of soil is dry: about every 8-12 days in summer, every 12-18 days in winter",
+     PALE,
+     DRAIN,
+     "Variegated leaves use less water: when unsure, wait a day"],
     ["Bright, indirect light keeps the variegation", "A little gentle morning sun is fine"],
     ["Airy aroid mix: 1 part potting soil, 1 part orchid bark, 1-2 parts perlite",
      "Variegated plants grow slowly and rot faster in wet soil: use a snug pot", "Slightly acidic: pH about 5.5-6.5",
      "Pot with drainage holes; if it grows all-green leaves, cut back to the last variegated one"]);
-  const VELVET = ["Keep lightly moist: water when the top 1 in. is dry", "Never let it dry out completely", "Likes humidity (60%+): a humidifier helps"];
+  const VELVET = ["Keep lightly moist: water when the top 1 in. of soil is dry, about every 4-6 days in summer, every 7-10 days in winter",
+    "Never let it dry out completely, and never let it sit soggy",
+    "Likes humidity of 60% or more: a humidifier or pebble tray helps",
+    "Water the soil, not the leaves: velvet leaves spot and rot when wet"];
   const VELVET_SUN = ["Medium to bright indirect light", "No direct sun: the velvet leaves scorch"];
   const VELVET_MIX = "Airy but moisture-holding mix: 1 part potting soil or coco coir, 2 parts orchid bark, 1 part perlite, plus a handful of sphagnum moss";
   const PH_VELVET = care(VELVET, VELVET_SUN,
@@ -89,7 +124,10 @@ const SPECIES = (() => {
   const PH_CRAWL = care(VELVET, VELVET_SUN,
     [VELVET_MIX, "Use a wide, shallow pot: it crawls along the surface", "Keep the thick stem lying on top of the soil, with only the roots buried", "Slightly acidic: pH about 5.5-6.5"]);
   const THAUM = care(
-    ["Water when the top 2 in. of soil is dry", DRAIN],
+    ["Water when the top 2 in. of soil is dry: about every 7-10 days in summer, every 12-14 days in winter",
+     DRAIN,
+     "A large plant: it drinks a lot in summer and little in winter",
+     "Likes humidity of 40-60%"],
     ["Bright light; some direct sun is fine"],
     ["Rich, well-draining mix: 2 parts potting soil, 1 part perlite, 1 part orchid or pine bark", "Slightly acidic: pH about 5.5-6.5",
      "Big, heavy plant: use a wide, sturdy pot with drainage holes", "Repot every 2 years; give it room to spread"]);
@@ -265,44 +303,65 @@ const SPECIES = (() => {
 
   // ---- Other aroids ----
   sp("zz-plant", "ZZ Plant", "Zamioculcas zamiifolia", ["zanzibar gem", "zz", "raven zz"],
-     ["Let the soil dry out completely", "About every 2-3 weeks; less in winter", "Overwatering rots its roots: when unsure, wait"],
+     ["Let the soil dry out completely between waterings: about every 14-21 days, monthly in winter",
+     "Its thick rhizomes store water, so it forgives a missed watering but not soggy soil",
+     "Wrinkled, limp stems mean very dry; yellow, mushy stems mean too wet",
+     DRAIN],
      ["Low to bright indirect light", "Avoid harsh direct sun"],
      ["Gritty, fast-draining mix: 1 part potting soil, 1 part perlite or pumice (or cactus mix with a little bark)",
       "Thick rhizomes store water, so they rot in wet soil", "Slightly acidic to neutral: pH about 6-7",
       "Snug pot with drainage holes (terracotta helps); keep the rhizomes at soil level, not buried deep"]);
   sp("peace-lily", "Peace Lily", "Spathiphyllum wallisii", ["spathiphyllum", "spath"],
-     ["Keep the soil evenly moist", "It droops dramatically when thirsty and perks up after a drink", "Filtered water helps prevent brown tips"],
+     ["Keep the soil lightly moist: water when the top 1 in. is dry, about every 5-7 days",
+     "It droops dramatically when thirsty and perks up within hours of a drink",
+     "Filtered or rain water prevents brown tips; the chemicals in tap water build up",
+     "Likes humidity of 50% or more",
+     DRAIN],
      ["Low to medium indirect light", "More light means more flowers", "No direct sun"],
      ["Moisture-holding potting mix with some drainage: 2 parts potting soil, 1 part perlite or orchid bark", "Slightly acidic: pH about 5.8-6.5",
       "Pot with drainage holes; it flowers better when slightly root-bound"]);
   sp("chinese-evergreen", "Chinese Evergreen", "Aglaonema", ["aglaonema", "red aglaonema", "silver bay"],
-     ["Water when the top 1-2 in. of soil is dry", DRAIN],
+     ["Water when the top 2 in. of soil is dry: about every 7-10 days, every 10-14 days in winter",
+     DRAIN,
+     "Tolerates some neglect; dislikes cold water and drafts"],
      ["Low to medium indirect light", "Pink and red kinds like brighter light"],
      ["Standard potting mix with perlite: 3 parts mix, 1 part perlite", "Slightly acidic: pH about 5.6-6.5",
       "Pot with drainage holes; it is happy slightly root-bound"]);
   sp("dieffenbachia", "Dumb Cane", "Dieffenbachia", ["dieffenbachia", "camille"],
-     ["Water when the top 1-2 in. of soil is dry", DRAIN],
+     ["Water when the top 2 in. of soil is dry: about every 7-10 days, every 10-14 days in winter",
+     DRAIN,
+     "Likes humidity; yellow lower leaves usually mean too much water"],
      ["Medium to bright indirect light", "Rotate it so it grows evenly"],
      ["Rich, well-draining mix: 3 parts potting soil, 1 part perlite", "Slightly acidic: pH about 6-6.5",
       "Pot with drainage holes; repot yearly while young"]);
   sp("arrowhead-plant", "Arrowhead Plant", "Syngonium podophyllum", ["syngonium", "arrowhead vine", "nephthytis"],
-     ["Water when the top 1 in. of soil is dry", DRAIN],
+     ["Water when the top 1-2 in. of soil is dry: about every 5-7 days, every 7-10 days in winter",
+     DRAIN,
+     "Drooping means thirsty; likes humidity of 50% or more"],
      ["Medium to bright indirect light", "Pink kinds need brighter light"],
      ["Light, slightly chunky mix: 2 parts potting soil, 1 part perlite, 1 part orchid bark", "Slightly acidic: pH about 6-6.5",
       "Pot with drainage holes; let it trail, or give it a pole to climb"]);
   sp("anthurium", "Anthurium", "Anthurium andraeanum", ["flamingo flower", "laceleaf", "painter's palette"],
-     ["Water when the top 1-2 in. of soil is dry", DRAIN],
+     ["Water when the top 1-2 in. of soil is dry: about every 5-7 days",
+     "Water thoroughly, then let it drain: its roots must never sit in water",
+     "Likes humidity of 60% or more",
+     "Filtered or rain water avoids mineral build-up on the roots"],
      ["Bright, indirect light for flowers", "Avoid direct sun"], ["Very chunky epiphyte mix: equal parts orchid bark, coco chips and perlite, with a little potting soil",
       "Its roots need lots of air: never use dense soil", "Slightly acidic: pH about 5.5-6.5",
       "Small pot with drainage holes; repot when the roots circle"]);
   sp("alocasia-polly", "Alocasia Polly", "Alocasia × amazonica 'Polly'", ["african mask", "elephant ear", "alocasia", "kris plant"],
-     ["Let the top 1-2 in. dry, then water", "Can go dormant in winter: water much less then", "Likes humidity"],
+     ["Let the top 1-2 in. dry, then water: about every 5-7 days in summer",
+     "It may go dormant in winter: water only about every 10-14 days then, keeping the corm barely moist",
+     "Likes humidity of 60% or more",
+     "Yellowing leaves usually mean too much water or cold"],
      ["Bright, indirect light", "Avoid direct sun"],
      ["Airy, slightly moist mix: 1 part potting soil (or coco coir), 1 part perlite, 1 part orchid bark",
       "It grows from a corm that rots in soggy soil", "Slightly acidic: pH about 5.5-6.5",
       "Small, snug pot with drainage holes; keep it nearly dry when dormant in winter"]);
   sp("colocasia", "Elephant Ear", "Colocasia esculenta", ["taro", "colocasia"],
-     ["Keep the soil consistently moist", "Thirsty plant, especially in summer"],
+     ["Keep the soil consistently moist: water about every 2-3 days in summer, weekly in winter",
+     "A thirsty plant: in summer it can stand in a shallow saucer of water",
+     "Droopy leaves in the afternoon mean it needs more water"],
      ["Bright light; some direct sun is fine"],
      ["Rich, heavy, moisture-holding mix: potting soil with compost and a little perlite",
       "It loves wet feet: in summer it can stand in a shallow saucer of water", "pH about 5.5-7",
@@ -540,3 +599,6 @@ const SPECIES = (() => {
 
   return list;
 })();
+
+// Goes up whenever the care text changes; the app offers to refresh saved plants' notes.
+const CARE_VERSION = 3;

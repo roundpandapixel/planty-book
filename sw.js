@@ -1,8 +1,8 @@
 // Keeps the app's files on the phone so it opens without internet.
 // Bump VERSION whenever a file changes, so phones pick up the new one.
-const VERSION = "planty-3";
+const VERSION = "planty-4";
 const FILES = [
-  "./", "index.html", "style.css", "icons.js", "species.js", "store.js", "sky.js", "meter.js", "app.js",
+  "./", "index.html", "style.css", "icons.js", "species.js", "config.js", "lib/qrcode.js", "store.js", "sync.js", "sky.js", "meter.js", "app.js",
   "manifest.webmanifest", "fonts/VT323-Regular.ttf",
   "art/tree_cutout.png", "art/icon-192.png", "art/icon-512.png",
 ];
@@ -15,6 +15,6 @@ self.addEventListener("activate", e => {
     .then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
+  if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;   // the cloud is never cached
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(hit => hit || fetch(e.request)));
 });

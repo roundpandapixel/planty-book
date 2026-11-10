@@ -206,8 +206,9 @@ function roomSection(room, plants, titled = true) {
     grid.append(card);
     const coverId = p.cover || p.photos[0];
     if (coverId) Store.getPhoto(coverId).then(ph => {
-      if (!ph) return;
-      const url = URL.createObjectURL(ph.blob);
+      const pic = ph && (ph.thumb || ph.blob);
+      if (!pic) return;
+      const url = URL.createObjectURL(pic);
       thumbURLs.push(url);
       card.querySelector(".thumb").innerHTML = `<img alt="" src="${url}">`;
     });
@@ -509,7 +510,8 @@ async function renderPhotos() {
     const img = document.createElement("img");
     img.alt = plant.name;
     img.draggable = false;
-    if (ph) { const u = URL.createObjectURL(ph.blob); photoURLs.push(u); img.src = u; }
+    const pic = ph && (ph.thumb || ph.blob);
+    if (pic) { const u = URL.createObjectURL(pic); photoURLs.push(u); img.src = u; }
     strip.append(img);
   }
   $("photo-empty").hidden = plant.photos.length > 0;
@@ -560,12 +562,30 @@ function showPhoto(animate = true) {
   frame.addEventListener("pointercancel", () => { moved = true; end(); });
 })();
 
-function openViewer() {
-  if (!photoURLs[photoIndex]) return;
-  $("viewer-img").src = photoURLs[photoIndex];
+// Full screen shows the original; if this device doesn't have it yet, the preview shows while it downloads.
+let viewerURL = null, viewerFor = null;
+async function openViewer() {
+  const id = plant && plant.photos[photoIndex];
+  const ph = id && await Store.getPhoto(id);
+  if (!ph) return;
+  const show = blob => {
+    if (viewerURL) URL.revokeObjectURL(viewerURL);
+    viewerURL = URL.createObjectURL(blob);
+    $("viewer-img").src = viewerURL;
+  };
+  viewerFor = id;
+  if (ph.blob || ph.thumb) show(ph.blob || ph.thumb);
   $("viewer").hidden = false;
+  if (!ph.blob && Sync.configured)
+    Sync.original(id).then(b => { if (b && viewerFor === id && !$("viewer").hidden) show(b); });
 }
-$("viewer").onclick = () => { $("viewer").hidden = true; };
+function closeViewer() {
+  $("viewer").hidden = true;
+  viewerFor = null;
+  if (viewerURL) { URL.revokeObjectURL(viewerURL); viewerURL = null; }
+  $("viewer-img").removeAttribute("src");
+}
+$("viewer").onclick = closeViewer;
 
 async function galleryOptions() {
   const has = plant.photos.length > 0;
@@ -595,22 +615,11 @@ async function galleryOptions() {
   }
 }
 
-// Shrink a photo to at most 1600 px so the book stays small.
-async function shrink(file) {
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
-  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-  bmp.close && bmp.close();
-  return new Promise(res => c.toBlob(b => res(b || file), "image/jpeg", 0.85));
-}
-
 async function addPhotos(files) {
   if (!files.length) return;
   for (const f of files) {
-    const blob = await shrink(f).catch(() => f);
-    const ph = { id: Store.newId(), plantId: plant.id, blob };
+    // The original file goes in untouched (full detail); Store makes the preview.
+    const ph = { id: Store.newId(), plantId: plant.id, type: f.type || "image/jpeg", created: Date.now(), blob: f };
     await Store.putPhoto(ph);
     plant.photos.push(ph.id);
     if (!plant.cover) plant.cover = ph.id;
@@ -635,8 +644,10 @@ async function saveBackup() {
   const photos = await Store.allPhotos();
   const rooms = await Store.allRooms();
   const out = { app: "plantybook", version: 2, saved: new Date().toISOString(), plants, rooms, photos: [] };
-  for (const ph of photos)
-    out.photos.push({ id: ph.id, plantId: ph.plantId, type: ph.blob.type, data: await blobToB64(ph.blob) });
+  for (const ph of photos) {
+    const pic = ph.blob || ph.thumb;
+    if (pic) out.photos.push({ id: ph.id, plantId: ph.plantId, type: pic.type, data: await blobToB64(pic) });
+  }
   const url = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: "application/json" }));
   const a = document.createElement("a");
   a.href = url; a.download = `planty-book-backup-${today()}.json`;
@@ -655,25 +666,142 @@ async function loadBackup(file) {
     `It has ${data.plants.length} plant(s). Plants already in the book with the same entry are replaced; the rest stay.`,
     "Load", "strong");
   if (!ok) return;
-  for (const ph of data.photos) await Store.putPhoto({ id: ph.id, plantId: ph.plantId, blob: b64ToBlob(ph.data, ph.type) });
+  for (const ph of data.photos) await Store.putPhoto({ id: ph.id, plantId: ph.plantId, type: ph.type, created: Date.now(), blob: b64ToBlob(ph.data, ph.type) });
   for (const r of data.rooms || []) await Store.putRoom(r);
   for (const p of data.plants) await Store.putPlant(p);
   showBook();
 }
 $("pick-backup").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (f) await loadBackup(f); };
 
+// ---------- sync ----------
+function agoText(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`;
+}
+function syncLine() {
+  const s = Sync.status();
+  if (!Sync.configured) return "Off";
+  if (s.error) return s.error;
+  if (s.running) return "Syncing...";
+  if (s.fetching) return `Downloading ${s.fetching} photo${s.fetching === 1 ? "" : "s"}...`;
+  if (!navigator.onLine) return "Offline: changes will wait";
+  return s.last ? `Up to date (${agoText(s.last)})` : "Waiting to sync";
+}
+const gb = n => (n < 1e6 ? `${Math.round(n / 1e3)} KB` : n < 1e8 ? `${(n / 1e6).toFixed(1)} MB` : `${(n / 1e9).toFixed(1)} GB`);
+const notice = (title, text) => modal({ title, body: `<p>${escapeHTML(text)}</p>`, actions: [{ label: "OK", value: null }] });
+
+function qrCanvas(text) {
+  const qr = qrcode(0, "L");
+  qr.addData(text);
+  qr.make();
+  const n = qr.getModuleCount(), cell = 5, margin = 3;
+  const c = document.createElement("canvas");
+  c.width = c.height = (n + 2 * margin) * cell;
+  c.className = "qr";
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = "#1d2b21";
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++)
+    if (qr.isDark(y, x)) g.fillRect((x + margin) * cell, (y + margin) * cell, cell, cell);
+  return c;
+}
+
+async function showPairing(first) {
+  const link = Sync.pairLink();
+  const body = document.createElement("div");
+  body.innerHTML = `<p>${first ? "Syncing is on. " : ""}To add another device, open this link there, or scan the code with its camera.</p>`;
+  body.append(qrCanvas(link));
+  const box = document.createElement("textarea");
+  box.readOnly = true; box.rows = 3; box.value = link;
+  box.onfocus = () => box.select();
+  body.append(box);
+  body.insertAdjacentHTML("beforeend",
+    `<p class="meter-help" style="text-align:left">Keep this private: anyone with the link can read your book. Photos and notes are encrypted before they leave your devices.</p>`);
+  const v = await modal({ title: "Add a device", body, actions: [{ label: "Copy link", cls: "strong", value: "copy" }, { label: "Done", value: null }] });
+  if (v === "copy") try { await navigator.clipboard.writeText(link); } catch (e) {}
+}
+
+async function syncMenu() {
+  if (!Sync.ready) { await notice("Sync", "The private cloud isn't switched on in this version yet."); return; }
+  if (!Sync.configured) {
+    const v = await modal({
+      title: "Sync",
+      body: `<p>Keep your plants, notes and photos the same on all your devices. Everything is encrypted on this device before it's uploaded, so only your devices can read it.</p>`,
+      actions: [
+        { label: "Start syncing on this device", cls: "strong", value: "start" },
+        { label: "I have a pairing link", value: "link" },
+        { label: "Close", value: null },
+      ],
+    });
+    try {
+      if (v === "start") { await Sync.startHere(); await showPairing(true); }
+      else if (v === "link") {
+        const text = await askText("Pairing link", "", "Paste it here");
+        if (text) { await Sync.joinFromLink(text); await notice("Connected", "This device is joining your book. Your plants and photos will appear in a moment."); }
+      }
+    } catch (e) { await notice("Sync", e.message); }
+    return;
+  }
+  const body = document.createElement("div");
+  body.innerHTML = `<p></p><p class="meter-help" style="text-align:left"></p>`;
+  body.children[0].textContent = syncLine();
+  Sync.usage().then(u => {
+    if (u) body.children[1].textContent = `Cloud storage: ${gb(u.bytes)} of ${gb(u.max)} used`;
+  });
+  const v = await modal({
+    title: "Sync", body,
+    actions: [
+      { label: "Sync now", cls: "strong", value: "now" },
+      { label: "Add another device", value: "pair" },
+      { label: "Stop syncing on this device", value: "stop" },
+      { label: "Close", value: null },
+    ],
+  });
+  if (v === "now") Sync.run();
+  else if (v === "pair") await showPairing(false);
+  else if (v === "stop" && await confirmBox("Stop syncing?",
+    "This device keeps its plants and photos, but stops sharing changes. The cloud copy stays as it is.", "Stop"))
+    Sync.stop();
+}
+
+// Opened from a pairing link: join the book.
+async function connectFromLink(text) {
+  if (!Sync.ready || Sync.configured) return;
+  if (!await confirmBox("Connect to sync?",
+    "This joins this device to your Planty Book cloud. What's here will be merged with what's there.", "Connect", "strong")) return;
+  try { await Sync.joinFromLink(text); await notice("Connected", "Your plants and photos will appear in a moment."); }
+  catch (e) { await notice("Sync", e.message); }
+}
+
+// Another device changed something: bring this screen up to date without disturbing what's being done.
+async function refreshView() {
+  if (!$("modal").hidden || !$("meter").hidden || !$("viewer").hidden) return;
+  if (!$("book").hidden) { showBook(); return; }
+  if (!plant || !$("notes-edit").hidden) return;
+  const p = await Store.getPlant(plant.id);
+  if (!p) { history.back(); return; }
+  plant = p;
+  plantRoom = p.room ? await Store.getRoom(p.room) : null;
+  $("plant-name").textContent = p.name;
+  renderSpecies(); renderRoom(); renderNotes();
+  await renderPhotos();
+}
+Sync.onChange = refreshView;
+
 async function menu() {
   const v = await modal({
     title: "Planty Book",
-    body: "<p>Your plants live on this phone. Save a backup now and then so they're safe.</p>",
+    body: "<p>Your plants live on your devices. Turn on Sync to share them between your phone and PC, and keep a backup now and then.</p>",
     actions: [
-      { label: "Save a backup", cls: "strong", value: "save" },
-      { label: "Load a backup", value: "load" },
+      { label: `Sync: ${Sync.ready ? syncLine() : "not available yet"}`, cls: "strong", value: "sync" },
+      { label: "Save a backup file", value: "save" },
+      { label: "Load a backup file", value: "load" },
       { label: Sky.motionOn() ? "Clouds and petals: on" : "Clouds and petals: off", value: "motion" },
       { label: "Close", value: null },
     ],
   });
-  if (v === "save") saveBackup();
+  if (v === "sync") await syncMenu();
+  else if (v === "save") saveBackup();
   else if (v === "load") $("pick-backup").click();
   else if (v === "motion") Sky.setMotion(!Sky.motionOn());
 }
@@ -759,17 +887,28 @@ document.querySelectorAll("[data-topic]").forEach(b => {
 
 // The phone's back button: page -> book.
 addEventListener("popstate", () => {
-  $("viewer").hidden = true;
+  closeViewer();
   $("modal").hidden = true;
   Meter.close();
   const id = location.hash.slice(1);
+  if (id.startsWith("pair=")) {            // a pairing link opened while the app is already open
+    history.replaceState({}, "", location.pathname + location.search);
+    connectFromLink(id);
+    return;
+  }
   if (id) openPlant(id, false); else showBook();
 });
 
 // Start on the book; a reload on a plant's page comes back to it (back still goes to the book).
-const startId = location.hash.slice(1);
+const startHash = location.hash.slice(1);
+const pairing = startHash.startsWith("pair=") ? startHash : null;     // a pairing link, not a plant
+const startId = pairing ? "" : startHash;
 history.replaceState({}, "", location.pathname + location.search);
-showBook().then(() => { if (startId) openPlant(startId); });
+showBook().then(() => {
+  if (startId) openPlant(startId);
+  if (pairing) connectFromLink(pairing);
+  Sync.kick(500);
+});
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http"))
   navigator.serviceWorker.register("sw.js").catch(() => {});

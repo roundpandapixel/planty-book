@@ -206,6 +206,10 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
   background: rgba(255, 255, 255, 0.18); border: 2px solid var(--ink); border-radius: 10px; outline: none;
 }
 
+/* QR code in the pairing dialog */
+.qr { display: block; width: 100%; max-width: 260px; margin: 10px auto; image-rendering: pixelated; border-radius: 10px; }
+.modal-box textarea { font-size: 18px; }
+
 /* Light meter */
 #sun-box { margin-top: 8px; }
 #meter {

@@ -92,11 +92,40 @@ function dueText(room) {
   return `Water ${every} · ${when}`;
 }
 
-async function waterRoom(room) {
-  room.last = today();
+// Choose a date on the phone's calendar (never later than today). Returns "YYYY-MM-DD", "" (cleared) or null (cancelled).
+async function askDate(title, value, shortcuts = true) {
+  const wrap = document.createElement("div");
+  const input = document.createElement("input");
+  input.type = "date"; input.className = "date-in"; input.max = today(); input.value = value || today();
+  wrap.append(input);
+  if (shortcuts) {
+    const row = document.createElement("div");
+    row.className = "quick";
+    for (const [label, back] of [["Today", 0], ["Yesterday", 1], ["2 days", 2], ["1 week", 7]]) {
+      const b = document.createElement("button");
+      b.className = "pill"; b.textContent = label;
+      b.onclick = () => { input.value = addDays(today(), -back); };
+      row.append(b);
+    }
+    wrap.append(row);
+  }
+  return modal({
+    title, body: wrap, inline: true,
+    actions: [{ label: "Clear", value: "" }, { label: "Cancel", value: null },
+              { label: "OK", cls: "strong", value: () => input.value || null }],
+  });
+}
+
+// A room was watered on this date: its plants were too.
+async function setRoomWatered(room, date) {
+  room.last = date;
   await Store.putRoom(room);
   for (const p of await Store.allPlants())
-    if (p.room === room.id) { p.lastWatered = room.last; await Store.putPlant(p); }
+    if (p.room === room.id) { p.lastWatered = date; await Store.putPlant(p); }
+}
+
+async function waterRoom(room) {
+  await setRoomWatered(room, today());
   showBook();
 }
 
@@ -106,10 +135,12 @@ async function editRoom(room) {
   const body = document.createElement("div");
   body.innerHTML = `<label class="field">Name<input type="text" maxlength="40" placeholder="Living room, kitchen..."></label>
     <label class="field">Water every <input type="number" min="1" max="60" inputmode="numeric" placeholder="-"> days</label>
+    <label class="field">Last watered <input type="date" class="date-in"></label>
     <p class="meter-help" style="text-align:left">Leave the days empty for no schedule.</p>`;
-  const [nameIn, everyIn] = body.querySelectorAll("input");
+  const [nameIn, everyIn, dateIn] = body.querySelectorAll("input");
   nameIn.value = room.name;
   everyIn.value = room.every || "";
+  dateIn.value = room.last || ""; dateIn.max = today();
   const actions = [{ label: "Save", cls: "strong", value: "save" }];
   if (!isNew) actions.push({ label: "Delete room", cls: "danger", value: "delete" });
   actions.push({ label: "Cancel", value: null });
@@ -124,7 +155,9 @@ async function editRoom(room) {
   room.name = nameIn.value.trim();
   const every = parseInt(everyIn.value, 10);
   room.every = every > 0 ? Math.min(every, 365) : null;
-  await Store.putRoom(room);
+  const last = dateIn.value || null;
+  if (last !== room.last) await setRoomWatered(room, last);       // also marks its plants
+  else await Store.putRoom(room);
   return room;
 }
 
@@ -185,6 +218,19 @@ function roomSection(room, plants, titled = true) {
         w.textContent = "Watered";
         w.onclick = () => waterRoom(room);
         head.append(w);
+      }
+      if (room.every) {
+        const c = document.createElement("button");
+        c.className = "icon-btn small ghost";
+        c.setAttribute("aria-label", "Pick the date it was last watered");
+        c.innerHTML = iconSVG("calendar");
+        c.onclick = async () => {
+          const v = await askDate(`${room.name}: last watered`, room.last);
+          if (v === null) return;
+          await setRoomWatered(room, v || null);
+          showBook();
+        };
+        head.append(c);
       }
       const e = document.createElement("button");
       e.className = "icon-btn small ghost";
@@ -383,6 +429,14 @@ async function chooseRoom() {
 
 async function wateredToday() {
   plant.lastWatered = today();
+  await save();
+  renderNotes();
+}
+
+async function pickWaterDate() {
+  const v = await askDate(`${plant.name}: last watered`, plant.lastWatered);
+  if (v === null) return;
+  plant.lastWatered = v || null;
   await save();
   renderNotes();
 }
@@ -899,6 +953,8 @@ $("plant-name").onkeydown = e => { if (e.key === "Enter") renamePlant(); };
 $("species-btn").onclick = () => chooseSpecies();
 $("room-btn").onclick = chooseRoom;
 $("watered-btn").onclick = wateredToday;
+$("water-date-btn").onclick = pickWaterDate;
+$("water-last").onclick = pickWaterDate;
 $("edit-btn").onclick = editNotes;
 $("notes-cancel").onclick = renderNotes;
 $("notes-save").onclick = saveNotes;

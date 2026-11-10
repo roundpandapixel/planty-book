@@ -188,7 +188,8 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
 .room { display: flex; flex-direction: column; gap: var(--gap); }
 .room-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; }
 .room-head .room-info { flex: 1; min-width: 0; }
-.room-head h2 { margin: 0; font-size: 30px; font-weight: normal; letter-spacing: 0.08em; overflow-wrap: anywhere; }
+.room-head .pill { min-height: 36px; padding: 2px 10px; font-size: 21px; }
+.room-head h2 { margin: 0; font-size: 27px; font-weight: normal; letter-spacing: 0.08em; overflow-wrap: anywhere; }
 .room-head p { margin: 2px 0 0; font-size: 21px; color: var(--ink-soft); }
 .room-head p.due { color: #ffe0ef; }
 .room-head p.due::before { content: "• "; }
@@ -210,6 +211,17 @@ textarea::placeholder, input::placeholder { color: var(--ink-soft); }
 /* QR code in the pairing dialog */
 .qr { display: block; width: 100%; max-width: 260px; margin: 10px auto; image-rendering: pixelated; border-radius: 10px; }
 .modal-box textarea { font-size: 18px; }
+
+/* Date picking */
+.date-in {
+  width: 100%; margin-top: 8px; padding: 10px 12px; font: inherit; font-size: 22px;
+  border: 2px solid var(--ink); border-radius: 10px; outline: none;
+  background: rgba(255, 255, 255, 0.92); color: #2b3a2e;
+}
+.quick { display: flex; gap: 8px; margin-top: 10px; }
+.quick .pill { flex: 1 1 auto; min-height: 38px; padding: 4px 8px; font-size: 19px; white-space: nowrap; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+#water-last { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; }
 
 /* Light meter */
 #sun-box { margin-top: 8px; }

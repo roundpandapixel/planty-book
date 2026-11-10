@@ -1,6 +1,6 @@
 // Keeps the app's files on the phone so it opens without internet.
 // Bump VERSION whenever a file changes, so phones pick up the new one.
-const VERSION = "planty-9";
+const VERSION = "planty-10";
 const FILES = [
   "./", "index.html", "style.css", "icons.js", "species.js", "config.js", "lib/qrcode.js", "store.js", "sync.js", "sky.js", "meter.js", "app.js",
   "manifest.webmanifest", "fonts/VT323-Regular.ttf",

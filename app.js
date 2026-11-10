@@ -78,29 +78,45 @@ function addDays(iso, n) {
   d.setDate(d.getDate() + n);
   return d.toLocaleDateString("en-CA");
 }
-// Days until the plant's next watering: 0 = today, negative = late, null = no schedule.
-// A plant with a schedule that has never been watered is due now.
+// A plant's schedule is a range of days (`every` to `everyMax`, e.g. 4 to 6; one number if `everyMax` is empty).
+// It counts as ready from the first day of the range and as late after the last.
+const elapsed = p => p.lastWatered ? Math.round((new Date(today() + "T12:00:00") - new Date(p.lastWatered + "T12:00:00")) / 86400000) : null;
+// Days until it is ready: 0 or less = ready now, null = no schedule. A plant never watered is ready now.
 function dueIn(p) {
   if (!p || !p.every) return null;
-  if (!p.lastWatered) return 0;
-  return Math.round((new Date(addDays(p.lastWatered, p.every) + "T12:00:00") - new Date(today() + "T12:00:00")) / 86400000);
+  const el = elapsed(p);
+  return el === null ? 0 : p.every - el;
 }
-const dueWords = n => n === 0 ? "due today" : n < 0 ? `${-n} day${n === -1 ? "" : "s"} late` : n === 1 ? "due tomorrow" : `due in ${n} days`;
-const everyWords = n => n === 1 ? "every day" : n === 7 ? "every week" : `every ${n} days`;
+// Days left before it is late: 0 = today is the last day, negative = late. Never watered counts as 0.
+function slack(p) {
+  const el = elapsed(p);
+  return el === null ? 0 : (p.everyMax || p.every) - el;
+}
+function whenText(p) {
+  if (!p || !p.every) return "";
+  if (!p.lastWatered) return "due now";
+  const open = dueIn(p), left = slack(p);
+  if (open > 0) return open === 1 ? "due tomorrow" : `due in ${open} days`;
+  if (left > 0) return `ready now, ${left} day${left === 1 ? "" : "s"} left`;
+  if (left === 0) return "due today";
+  return `${-left} day${left === -1 ? "" : "s"} late`;
+}
+const everyWords = (a, b) => b && b > a ? `every ${a}-${b} days` : a === 1 ? "every day" : a === 7 ? "every week" : `every ${a} days`;
+const guessWords = g => g[0] === g[1] ? `${g[0]}` : `${g[0]}-${g[1]}`;
 
-// A starting guess for how often a species wants water, read from its care notes (null if they don't say).
+// A starting guess [fewest, most] days for how often a species wants water, read from its care notes (null if they don't say).
 function suggestedEvery(s) {
   const t = s.water.join(" ").toLowerCase();
   let m;
-  if ((m = /every (\d+)\s*[-–]\s*(\d+) weeks/.exec(t))) return Math.round((+m[1] + +m[2]) / 2 * 7);
-  if ((m = /every (\d+)\s*[-–]\s*(\d+) days/.exec(t))) return Math.round((+m[1] + +m[2]) / 2);
-  if ((m = /every (\d+) weeks/.exec(t))) return +m[1] * 7;
-  if (/once a week|weekly/.test(t)) return 7;
-  if (/dry out (completely|almost completely)/.test(t)) return 14;
-  if (/top (2|3)[-–]?\d? ?in|half of the soil/.test(t)) return 10;
-  if (/top 1[-–]2 in/.test(t)) return 7;
-  if (/top 1 in/.test(t)) return 5;
-  if (/moist|never let it dry/.test(t)) return 3;
+  if ((m = /every (\d+)\s*[-–]\s*(\d+) weeks/.exec(t))) return [m[1] * 7, m[2] * 7];
+  if ((m = /every (\d+)\s*[-–]\s*(\d+) days/.exec(t))) return [+m[1], +m[2]];
+  if ((m = /every (\d+) weeks/.exec(t))) return [m[1] * 7, m[1] * 7];
+  if (/once a week|weekly/.test(t)) return [7, 7];
+  if (/dry out (completely|almost completely)/.test(t)) return [14, 21];
+  if (/top (2|3)[-–]?\d? ?in|half of the soil/.test(t)) return [7, 10];
+  if (/top 1[-–]2 in/.test(t)) return [5, 7];
+  if (/top 1 in/.test(t)) return [4, 6];
+  if (/moist|never let it dry/.test(t)) return [2, 3];
   return null;
 }
 
@@ -128,34 +144,40 @@ async function askDate(title, value, shortcuts = true) {
   });
 }
 
-// How often does this plant need water? Returns a number of days, "" (no schedule) or null (cancelled).
+// How often does this plant need water? Returns { every, max } (days; max is null for one number),
+// "" (no schedule) or null (cancelled).
 async function askEvery(p) {
-  const s = speciesById(p.species), guess = s ? suggestedEvery(s) : null;
+  const sp = speciesById(p.species), guess = sp ? suggestedEvery(sp) : null;
   const wrap = document.createElement("div");
-  wrap.innerHTML = `<label class="field">Water every <input type="number" class="num-in" min="1" max="365" inputmode="numeric" placeholder="-"> days</label>
-    <div class="quick"></div>`;
-  const input = wrap.querySelector("input"), row = wrap.querySelector(".quick");
-  input.value = p.every || "";
-  for (const n of [2, 3, 5, 7, 10, 14, 21, 30]) {
+  wrap.innerHTML = `<label class="field">Every <input type="number" class="num-in" min="1" max="365" inputmode="numeric" placeholder="-"> to <input type="number" class="num-in" min="1" max="365" inputmode="numeric" placeholder="-"> days</label>
+    <p class="meter-help" style="text-align:left">Use one number, or a range like 4 to 6. The plant shows as ready on the first day and late after the last.</p>
+    <div class="quick one"></div><div class="quick range"></div>`;
+  const [lo, hi] = wrap.querySelectorAll("input");
+  lo.value = p.every || ""; hi.value = p.everyMax && p.everyMax > p.every ? p.everyMax : "";
+  const chip = (row, label, fn) => {
     const b = document.createElement("button");
-    b.className = "pill"; b.textContent = n;
-    b.onclick = () => { input.value = n; };
-    row.append(b);
-  }
+    b.className = "pill"; b.textContent = label; b.onclick = fn;
+    wrap.querySelector(row).append(b);
+  };
+  for (const n of [2, 3, 5, 7, 10, 14, 21, 30]) chip(".one", String(n), () => { lo.value = n; hi.value = ""; });
+  for (const [a, b] of [[2, 3], [3, 4], [4, 6], [5, 7], [7, 10], [10, 14], [14, 21]]) chip(".range", `${a}-${b}`, () => { lo.value = a; hi.value = b; });
   if (guess) {
     const note = document.createElement("p");
     note.className = "meter-help"; note.style.textAlign = "left";
-    note.textContent = `A starting guess for ${s.name}: about every ${guess} days, from its care notes. Check the soil, since every home is different.`;
+    note.textContent = `A starting guess for ${sp.name}: about every ${guessWords(guess)} days, from its care notes. Check the soil, since every home is different.`;
     wrap.append(note);
     const use = document.createElement("button");
-    use.className = "pill"; use.textContent = `Use ${guess} days`; use.style.marginTop = "8px";
-    use.onclick = () => { input.value = guess; };
+    use.className = "pill"; use.textContent = `Use ${guessWords(guess)} days`; use.style.marginTop = "8px";
+    use.onclick = () => { lo.value = guess[0]; hi.value = guess[1] > guess[0] ? guess[1] : ""; };
     wrap.append(use);
   }
   return modal({
     title: `${p.name}: how often?`, body: wrap, inline: true,
     actions: [{ label: "No schedule", value: "" }, { label: "Cancel", value: null },
-              { label: "OK", cls: "strong", value: () => { const n = parseInt(input.value, 10); return n > 0 ? Math.min(n, 365) : null; } }],
+              { label: "OK", cls: "strong", value: () => {
+                const a = parseInt(lo.value, 10), b = parseInt(hi.value, 10);
+                return a > 0 ? { every: Math.min(a, 365), max: b > a ? Math.min(b, 365) : null } : null;
+              } }],
   });
 }
 
@@ -234,7 +256,7 @@ async function showBook() {
 
   // Today: the plants that need water now
   const due = plants.filter(p => dueIn(p) !== null && dueIn(p) <= 0)
-    .sort((a, b) => dueIn(a) - dueIn(b) || a.name.localeCompare(b.name));
+    .sort((a, b) => slack(a) - slack(b) || a.name.localeCompare(b.name));        // the most overdue first
   const box = document.createElement("section");
   box.className = "panel due-panel";
   if (due.length) {
@@ -253,7 +275,7 @@ async function showBook() {
       row.className = "due-row";
       row.innerHTML = `<button class="who"><span class="nm"></span><small></small></button><button class="pill">Watered</button>`;
       row.querySelector(".nm").textContent = p.name;
-      const n = dueIn(p), bits = [roomName.get(p.room), n < 0 ? dueWords(n) : ""].filter(Boolean);
+      const t = whenText(p), bits = [roomName.get(p.room), t === "due today" || t === "due now" ? "" : t].filter(Boolean);
       row.querySelector("small").textContent = bits.join(" · ");
       row.querySelector(".who").onclick = () => openPlant(p.id);
       row.querySelector(".pill").onclick = async () => { await waterNow(p); showBook(); };
@@ -264,7 +286,7 @@ async function showBook() {
     const next = plants.filter(p => dueIn(p) !== null).sort((a, b) => dueIn(a) - dueIn(b))[0];
     if (next) {
       box.innerHTML = `<h2>Nothing to water today</h2><p></p>`;
-      box.querySelector("p").textContent = `Next: ${next.name}, ${dueWords(dueIn(next))}`;
+      box.querySelector("p").textContent = `Next: ${next.name}, ${whenText(next)}`;
       body.append(box);
     }
   }
@@ -286,12 +308,15 @@ async function showBook() {
   if (groupMode === "water") {
     const groups = new Map();
     for (const p of plants) {
-      const k = p.every || 0;
-      if (!groups.has(k)) groups.set(k, []);
-      groups.get(k).push(p);
+      const lo = p.every || 0, hi = lo ? (p.everyMax > lo ? p.everyMax : lo) : 0, k = lo + "-" + hi;
+      if (!groups.has(k)) groups.set(k, { lo, hi, list: [] });
+      groups.get(k).list.push(p);
     }
-    for (const k of [...groups.keys()].sort((a, b) => (a || 1e9) - (b || 1e9)))
-      body.append(plantGroup(k ? `Every ${k === 1 ? "day" : k + " days"}` : "No schedule yet", groups.get(k), roomName, "room"));
+    const order = [...groups.values()].sort((a, b) => (a.lo || 1e9) - (b.lo || 1e9) || a.hi - b.hi);
+    for (const g of order) {
+      const title = !g.lo ? "No schedule yet" : g.hi > g.lo ? `Every ${g.lo}-${g.hi} days` : g.lo === 1 ? "Every day" : `Every ${g.lo} days`;
+      body.append(plantGroup(title, g.list, roomName, "room"));
+    }
   } else {
     const known = new Set(rooms.map(r => r.id));
     for (const r of rooms) body.append(plantGroup(r.name, plants.filter(p => p.room === r.id), roomName, "every", r));
@@ -317,7 +342,7 @@ function plantGroup(title, plants, roomName, sub, room = null) {
   head.querySelector("h2").textContent = title;
   const dueN = plants.filter(p => dueIn(p) !== null && dueIn(p) <= 0).length;
   const line = head.querySelector("p");
-  line.textContent = `${plants.length} plant${plants.length === 1 ? "" : "s"}` + (dueN ? ` · ${dueN} due today` : "");
+  line.textContent = `${plants.length} plant${plants.length === 1 ? "" : "s"}` + (dueN ? ` · ${dueN} to water` : "");
   if (dueN) line.className = "due";
   if (room) {
     const e = document.createElement("button");
@@ -337,7 +362,7 @@ function plantGroup(title, plants, roomName, sub, room = null) {
     card.innerHTML = `<div class="thumb">${iconSVG("sprout")}</div><div class="label"></div><div class="sub"></div>`;
     card.querySelector(".label").textContent = p.name;
     const n = dueIn(p);
-    card.querySelector(".sub").textContent = sub === "room" ? (roomName.get(p.room) || "") : p.every ? everyWords(p.every) : "";
+    card.querySelector(".sub").textContent = sub === "room" ? (roomName.get(p.room) || "") : p.every ? everyWords(p.every, p.everyMax) : "";
     if (n !== null && n <= 0) card.classList.add("due-card");
     card.onclick = () => openPlant(p.id);
     grid.append(card);
@@ -420,15 +445,15 @@ function renderNotes() {
   $("water-box").hidden = topic !== "water";
   if (topic === "water") {
     const sp = speciesById(plant.species), guess = sp ? suggestedEvery(sp) : null;
-    $("water-every").textContent = plant.every ? `Water ${everyWords(plant.every)}`
-      : guess ? `How often? A guess for this species: about every ${guess} days (tap to set)`
+    $("water-every").textContent = plant.every ? `Water ${everyWords(plant.every, plant.everyMax)}`
+      : guess ? `How often? A guess for this species: about every ${guessWords(guess)} days (tap to set)`
       : "How often does it need water? Tap to set";
     $("water-last").textContent = plant.lastWatered
       ? `Last watered: ${niceDate(plant.lastWatered)} (${daysAgo(plant.lastWatered)})`
       : "Last watered: not yet";
-    const n = dueIn(plant);
-    $("water-next").textContent = n === null ? "" : `Next: ${dueWords(n)}`;
-    $("water-next").hidden = n === null;
+    const w = whenText(plant);
+    $("water-next").textContent = w ? `Next: ${w}` : "";
+    $("water-next").hidden = !w;
   }
   if (topic === "pest")
     $("pest-last").textContent = plant.lastPest
@@ -532,7 +557,8 @@ async function wateredToday() {
 async function pickEvery() {
   const v = await askEvery(plant);
   if (v === null) return;
-  plant.every = v || null;
+  plant.every = v ? v.every : null;
+  plant.everyMax = v ? v.max : null;
   await save();
   renderNotes();
 }
